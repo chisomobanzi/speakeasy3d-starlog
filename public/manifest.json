@@ -1,0 +1,60 @@
+{
+  "name": "Starlog - Language Dictionary",
+  "short_name": "Starlog",
+  "description": "Your personal language dictionary. Capture, learn, and share vocabulary from endangered and underrepresented languages.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Word",
+      "short_name": "Add",
+      "description": "Add a new word to your dictionary",
+      "url": "/starlog/capture",
+      "icons": [{ "src": "/icons/add.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Decks",
+      "short_name": "Decks",
+      "description": "View your vocabulary decks",
+      "url": "/starlog/decks",
+      "icons": [{ "src": "/icons/decks.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Search",
+      "short_name": "Search",
+      "description": "Search your dictionary",
+      "url": "/starlog/lookup",
+      "icons": [{ "src": "/icons/search.png", "sizes": "96x96" }]
+    }
+  ]
+}
