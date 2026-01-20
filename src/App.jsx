@@ -19,6 +19,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import DecksPage from './pages/DecksPage';
 import SearchPage from './pages/SearchPage';
 import AddWordPage from './pages/AddWordPage';
+import ImportPage from './pages/ImportPage';
 import DeckDetailPage from './pages/DeckDetailPage';
 import CommunityPage from './pages/CommunityPage';
 import SettingsPage from './pages/settings/SettingsPage';
@@ -93,6 +94,9 @@ function AppRoutes() {
 
         {/* Add word */}
         <Route path="add" element={<AddWordPage />} />
+
+        {/* Import deck */}
+        <Route path="import" element={<ImportPage />} />
 
         {/* Deck detail */}
         <Route path="decks/:deckId" element={<DeckDetailPage />} />

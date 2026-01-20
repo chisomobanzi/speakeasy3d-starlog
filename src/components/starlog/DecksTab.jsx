@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, BookOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, BookOpen, Upload } from 'lucide-react';
 import { useDecks } from '../../hooks/useDecks';
 import DeckCard from './DeckCard';
 import Button from '../ui/Button';
@@ -133,13 +134,21 @@ export default function DecksTab() {
             {decks.length} {decks.length === 1 ? 'deck' : 'decks'}
           </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setShowCreateModal(true)}
-        >
-          <Plus className="w-5 h-5" />
-          New Deck
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link to="/import">
+            <Button variant="secondary">
+              <Upload className="w-5 h-5" />
+              Import
+            </Button>
+          </Link>
+          <Button
+            variant="primary"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus className="w-5 h-5" />
+            New Deck
+          </Button>
+        </div>
       </div>
 
       {/* Decks list */}
