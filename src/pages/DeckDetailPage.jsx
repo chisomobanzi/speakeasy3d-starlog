@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Play, Plus, MoreVertical, Edit, Trash2, Share2, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDecks } from '../hooks/useDecks';
 import { useEntries } from '../hooks/useEntries';
@@ -8,11 +8,11 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import EntryCard from '../components/starlog/EntryCard';
-import ReviewMode from '../components/starlog/ReviewMode';
+import ConstellationView from '../components/starlog/ConstellationView';
 import { EntryCardSkeleton } from '../components/ui/LoadingSpinner';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/Modal';
-import { getDueEntries, getReviewStats } from '../lib/srs';
+import { getReviewStats } from '../lib/srs';
 
 export default function DeckDetailPage() {
   const { deckId } = useParams();
@@ -20,10 +20,9 @@ export default function DeckDetailPage() {
   const { success, error } = useToast();
 
   const { getDeck, deleteDeck } = useDecks();
-  const { entries, loading, fetchEntries, deleteEntry, updateSrsData } = useEntries(deckId);
+  const { entries, loading, fetchEntries, deleteEntry } = useEntries(deckId);
 
   const [deck, setDeck] = useState(null);
-  const [showReview, setShowReview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -71,155 +70,137 @@ export default function DeckDetailPage() {
 
   // Get review stats
   const stats = getReviewStats(entries);
-  const dueEntries = getDueEntries(entries);
 
   if (!deck) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         <div className="h-20 bg-slate-800 rounded-xl animate-pulse" />
-        <EntryCardSkeleton />
-        <EntryCardSkeleton />
+        <div className="h-64 bg-slate-800 rounded-xl animate-pulse" />
       </div>
-    );
-  }
-
-  if (showReview) {
-    return (
-      <ReviewMode
-        entries={dueEntries}
-        onComplete={() => setShowReview(false)}
-        onUpdateEntry={updateSrsData}
-        onClose={() => setShowReview(false)}
-      />
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto space-y-0">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link to="/">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+      <div className="px-4 py-3 flex items-center justify-between bg-slate-900/50 border-b border-slate-800 sticky top-14 z-30 backdrop-blur-lg">
+        <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+          <ArrowLeft size={20} />
+          <span>Back</span>
         </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-              style={{ backgroundColor: `${deck.color || '#10b981'}20` }}
-            >
-              {deck.icon || <BookOpen style={{ color: deck.color || '#10b981' }} className="w-5 h-5" />}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">{deck.name}</h1>
-              {deck.description && (
-                <p className="text-sm text-slate-400">{deck.description}</p>
-              )}
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: deck.color || '#10b981' }}
+          />
+          <span className="font-semibold text-white">{deck.name}</span>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="text-slate-400 hover:text-red-400"
+        >
+          <Trash2 size={18} />
+        </Button>
       </div>
 
-      {/* Stats & Actions */}
-      <Card className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      {/* Stats bar */}
+      <div className="px-4 py-3 flex items-center justify-between bg-slate-900/30 border-b border-slate-800">
+        <div className="flex items-center gap-4 text-sm">
           <Badge>{entries.length} words</Badge>
           <Badge variant="primary">{deck.target_language?.toUpperCase()}</Badge>
-          {dueEntries.length > 0 && (
-            <Badge variant="warning">{dueEntries.length} due</Badge>
-          )}
         </div>
-        <div className="flex items-center gap-2">
-          {dueEntries.length > 0 && (
-            <Button variant="primary" onClick={() => setShowReview(true)}>
-              <Play className="w-4 h-4" />
-              Review ({dueEntries.length})
-            </Button>
-          )}
-          <Link to="/add">
-            <Button variant="secondary">
-              <Plus className="w-4 h-4" />
-              Add Word
-            </Button>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <Trash2 className="w-5 h-5" />
+        <Link to="/add">
+          <Button variant="secondary" size="sm">
+            <Plus className="w-4 h-4" />
+            Add
           </Button>
-        </div>
-      </Card>
+        </Link>
+      </div>
 
-      {/* Progress stats */}
-      {entries.length > 0 && (
-        <div className="grid grid-cols-4 gap-4">
-          <Card className="text-center py-3">
-            <p className="text-lg font-bold text-white">{stats.new + stats.pending}</p>
-            <p className="text-xs text-slate-500">New</p>
-          </Card>
-          <Card className="text-center py-3">
-            <p className="text-lg font-bold text-yellow-400">{stats.due}</p>
-            <p className="text-xs text-slate-500">Due</p>
-          </Card>
-          <Card className="text-center py-3">
-            <p className="text-lg font-bold text-green-400">{stats.mastered}</p>
-            <p className="text-xs text-slate-500">Mastered</p>
-          </Card>
-          <Card className="text-center py-3">
-            <p className="text-lg font-bold text-starlog-400">
-              {Math.round(stats.averageMastery * 100)}%
-            </p>
-            <p className="text-xs text-slate-500">Avg Mastery</p>
-          </Card>
+      {/* Side-by-side layout on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-4 lg:p-4">
+        {/* Constellation view */}
+        <div className="lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)]">
+          <ConstellationView
+            entries={entries}
+            deckName={deck.name}
+            deckColor={deck.color || '#10b981'}
+          />
         </div>
-      )}
 
-      {/* Entries list */}
-      {loading ? (
-        <div className="space-y-4">
-          <EntryCardSkeleton />
-          <EntryCardSkeleton />
-          <EntryCardSkeleton />
-        </div>
-      ) : entries.length === 0 ? (
-        <Card className="text-center py-12">
-          <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No words yet</h3>
-          <p className="text-slate-400 mb-4">
-            Start adding vocabulary to this deck
-          </p>
-          <Link to="/add">
-            <Button variant="primary">
-              <Plus className="w-5 h-5" />
-              Add Your First Word
-            </Button>
-          </Link>
-        </Card>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-4"
-        >
-          {entries.map((entry, index) => (
+        {/* Words list */}
+        <div className="px-4 py-4 lg:px-0 space-y-4">
+          {/* Progress stats */}
+          {entries.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              <Card className="text-center py-3">
+                <p className="text-lg font-bold text-white">{stats.new + stats.pending}</p>
+                <p className="text-xs text-slate-500">New</p>
+              </Card>
+              <Card className="text-center py-3">
+                <p className="text-lg font-bold text-yellow-400">{stats.due}</p>
+                <p className="text-xs text-slate-500">Due</p>
+              </Card>
+              <Card className="text-center py-3">
+                <p className="text-lg font-bold text-green-400">{stats.mastered}</p>
+                <p className="text-xs text-slate-500">Mastered</p>
+              </Card>
+              <Card className="text-center py-3">
+                <p className="text-lg font-bold text-cyan-400">
+                  {Math.round(stats.averageMastery * 100)}%
+                </p>
+                <p className="text-xs text-slate-500">Mastery</p>
+              </Card>
+            </div>
+          )}
+
+          {/* Entries list */}
+          {loading ? (
+            <div className="space-y-4">
+              <EntryCardSkeleton />
+              <EntryCardSkeleton />
+              <EntryCardSkeleton />
+            </div>
+          ) : entries.length === 0 ? (
+            <Card className="text-center py-12">
+              <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No words yet</h3>
+              <p className="text-slate-400 mb-4">
+                Start adding vocabulary to this deck
+              </p>
+              <Link to="/add">
+                <Button variant="primary">
+                  <Plus className="w-5 h-5" />
+                  Add Your First Word
+                </Button>
+              </Link>
+            </Card>
+          ) : (
             <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-3"
             >
-              <EntryCard
-                entry={entry}
-                onDelete={handleDeleteEntry}
-                onPlay={handlePlayAudio}
-              />
+              {entries.map((entry, index) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                >
+                  <EntryCard
+                    entry={entry}
+                    onDelete={handleDeleteEntry}
+                    onPlay={handlePlayAudio}
+                  />
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
-      )}
+          )}
+        </div>
+      </div>
 
       {/* Delete confirmation */}
       <ConfirmDialog

@@ -2,6 +2,113 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
+// DEV MODE: Set to true to use mock data
+const DEV_MODE = true;
+
+// Mock entries for development
+const MOCK_ENTRIES = {
+  'mock-deck-1': [
+    {
+      id: 'entry-1',
+      deck_id: 'mock-deck-1',
+      user_id: 'dev-user-123',
+      word: 'saudade',
+      phonetic: 'sow-DAH-jee',
+      translation: 'a deep longing or nostalgia',
+      language: 'pt',
+      notes: 'One of the most beautiful untranslatable words. Describes a melancholic longing for something or someone you love.',
+      tags: ['emotion', 'untranslatable'],
+      source_type: 'conversation',
+      contributor_name: 'Maria Silva',
+      contributor_location: 'Lisbon, Portugal',
+      srs_state: 'learning',
+      mastery_level: 0.4,
+      streak: 3,
+      review_count: 5,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'entry-2',
+      deck_id: 'mock-deck-1',
+      user_id: 'dev-user-123',
+      word: 'obrigado',
+      phonetic: 'oh-bree-GAH-doo',
+      translation: 'thank you (masculine)',
+      language: 'pt',
+      notes: 'Use "obrigada" if you are female.',
+      tags: ['greeting', 'essential'],
+      source_type: 'class',
+      srs_state: 'mastered',
+      mastery_level: 0.9,
+      streak: 12,
+      review_count: 15,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'entry-3',
+      deck_id: 'mock-deck-1',
+      user_id: 'dev-user-123',
+      word: 'bom dia',
+      phonetic: 'bohm JEE-ah',
+      translation: 'good morning',
+      language: 'pt',
+      tags: ['greeting'],
+      source_type: 'class',
+      srs_state: 'learning',
+      mastery_level: 0.6,
+      streak: 5,
+      review_count: 8,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ],
+  'mock-deck-2': [
+    {
+      id: 'entry-4',
+      deck_id: 'mock-deck-2',
+      user_id: 'dev-user-123',
+      word: 'Mhoroi',
+      phonetic: 'moh-ROY',
+      translation: 'Hello (to one person)',
+      language: 'sn',
+      notes: 'Standard Shona greeting for one person. Use "Mhoroi" for plural.',
+      tags: ['greeting', 'essential'],
+      source_type: 'conversation',
+      contributor_name: 'Tendai Moyo',
+      contributor_location: 'Harare, Zimbabwe',
+      srs_state: 'new',
+      mastery_level: 0.1,
+      streak: 1,
+      review_count: 2,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'entry-5',
+      deck_id: 'mock-deck-2',
+      user_id: 'dev-user-123',
+      word: 'Maswera sei?',
+      phonetic: 'mah-SWEH-rah say',
+      translation: 'How was your day? / Good afternoon',
+      language: 'sn',
+      notes: 'Common afternoon greeting, literally asking about how the day has been.',
+      tags: ['greeting'],
+      source_type: 'conversation',
+      srs_state: 'learning',
+      mastery_level: 0.3,
+      streak: 2,
+      review_count: 4,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ],
+};
+
+// Store for dev mode entries (mutable)
+let devEntries = JSON.parse(JSON.stringify(MOCK_ENTRIES));
+
 /**
  * Hook for managing entries within decks
  */
@@ -16,6 +123,13 @@ export function useEntries(deckId = null) {
    */
   const fetchEntries = useCallback(async (targetDeckId = deckId) => {
     if (!user || !targetDeckId) return;
+
+    // In dev mode, return mock entries
+    if (DEV_MODE) {
+      const mockEntries = devEntries[targetDeckId] || [];
+      setEntries(mockEntries);
+      return mockEntries;
+    }
 
     setLoading(true);
     setError(null);
@@ -45,6 +159,16 @@ export function useEntries(deckId = null) {
    */
   const searchEntries = useCallback(async (query, options = {}) => {
     if (!user || !query) return [];
+
+    // In dev mode, search mock entries
+    if (DEV_MODE) {
+      const allEntries = Object.values(devEntries).flat();
+      const lowerQuery = query.toLowerCase();
+      return allEntries.filter(entry =>
+        entry.word.toLowerCase().includes(lowerQuery) ||
+        entry.translation.toLowerCase().includes(lowerQuery)
+      );
+    }
 
     try {
       let queryBuilder = supabase
@@ -79,6 +203,12 @@ export function useEntries(deckId = null) {
   const getEntry = useCallback(async (entryId) => {
     if (!user) return null;
 
+    // In dev mode, find in mock entries
+    if (DEV_MODE) {
+      const allEntries = Object.values(devEntries).flat();
+      return allEntries.find(e => e.id === entryId) || null;
+    }
+
     try {
       const { data, error } = await supabase
         .from('entries')
@@ -100,6 +230,32 @@ export function useEntries(deckId = null) {
    */
   const createEntry = useCallback(async (entryData) => {
     if (!user) return { error: new Error('Not authenticated') };
+
+    // In dev mode, create mock entry
+    if (DEV_MODE) {
+      const newEntry = {
+        id: `entry-${Date.now()}`,
+        user_id: user.id,
+        ...entryData,
+        srs_state: 'new',
+        mastery_level: 0,
+        streak: 0,
+        review_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (!devEntries[entryData.deck_id]) {
+        devEntries[entryData.deck_id] = [];
+      }
+      devEntries[entryData.deck_id].unshift(newEntry);
+
+      if (entryData.deck_id === deckId) {
+        setEntries(prev => [newEntry, ...prev]);
+      }
+
+      return { data: newEntry };
+    }
 
     try {
       const { data, error } = await supabase
@@ -135,6 +291,29 @@ export function useEntries(deckId = null) {
   const updateEntry = useCallback(async (entryId, updates) => {
     if (!user) return { error: new Error('Not authenticated') };
 
+    // In dev mode, update mock entry
+    if (DEV_MODE) {
+      let updatedEntry = null;
+      for (const deckKey of Object.keys(devEntries)) {
+        const idx = devEntries[deckKey].findIndex(e => e.id === entryId);
+        if (idx !== -1) {
+          devEntries[deckKey][idx] = {
+            ...devEntries[deckKey][idx],
+            ...updates,
+            updated_at: new Date().toISOString(),
+          };
+          updatedEntry = devEntries[deckKey][idx];
+          break;
+        }
+      }
+
+      if (updatedEntry) {
+        setEntries(prev => prev.map(e => e.id === entryId ? updatedEntry : e));
+        return { data: updatedEntry };
+      }
+      return { error: new Error('Entry not found') };
+    }
+
     try {
       const { data, error } = await supabase
         .from('entries')
@@ -162,6 +341,19 @@ export function useEntries(deckId = null) {
    */
   const deleteEntry = useCallback(async (entryId, targetDeckId = deckId) => {
     if (!user) return { error: new Error('Not authenticated') };
+
+    // In dev mode, delete mock entry
+    if (DEV_MODE) {
+      for (const deckKey of Object.keys(devEntries)) {
+        const idx = devEntries[deckKey].findIndex(e => e.id === entryId);
+        if (idx !== -1) {
+          devEntries[deckKey].splice(idx, 1);
+          break;
+        }
+      }
+      setEntries(prev => prev.filter(e => e.id !== entryId));
+      return { success: true };
+    }
 
     try {
       const { error } = await supabase
