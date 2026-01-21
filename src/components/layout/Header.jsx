@@ -27,8 +27,8 @@ export default function Header() {
   // Get page title based on current route
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/') return 'My Decks';
-    if (path === '/search') return 'Search';
+    if (path === '/' || path === '/search') return 'Search';
+    if (path === '/decks') return 'My Decks';
     if (path === '/add') return 'Add Word';
     if (path.startsWith('/decks/')) return 'Deck';
     if (path === '/community') return 'Community';
@@ -54,8 +54,8 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            <NavLink to="/search">Search</NavLink>
-            <NavLink to="/">Decks</NavLink>
+            <NavLink to="/">Search</NavLink>
+            <NavLink to="/decks">Decks</NavLink>
             <NavLink to="/add">Add Word</NavLink>
             <NavLink to="/community">Community</NavLink>
             <NavLink to="/settings">Settings</NavLink>

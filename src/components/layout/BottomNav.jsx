@@ -3,8 +3,8 @@ import { Search, Plus, Users, BookOpen, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
-  { path: '/search', icon: Search, label: 'Search' },
-  { path: '/', icon: BookOpen, label: 'Decks' },
+  { path: '/', icon: Search, label: 'Search' },
+  { path: '/decks', icon: BookOpen, label: 'Decks' },
   { path: '/add', icon: Plus, label: 'Add', highlight: true },
   { path: '/community', icon: Users, label: 'Community' },
   { path: '/settings', icon: Settings, label: 'Settings' },
