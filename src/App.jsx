@@ -80,6 +80,14 @@ function AppRoutes() {
       } />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
+      {/* Public browsing routes (no auth required) */}
+      <Route path="/dictionary" element={<AppShell />}>
+        <Route index element={<SearchPage />} />
+      </Route>
+      <Route path="/browse" element={<AppShell />}>
+        <Route index element={<CommunityPage />} />
+      </Route>
+
       {/* Protected app routes */}
       <Route path="/" element={
         <ProtectedRoute>
@@ -108,8 +116,8 @@ function AppRoutes() {
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
-      {/* Catch all - redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Catch all - redirect to dictionary for public access */}
+      <Route path="*" element={<Navigate to="/dictionary" replace />} />
     </Routes>
   );
 }
