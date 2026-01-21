@@ -80,36 +80,39 @@ function AppRoutes() {
       } />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Public routes (no auth required) */}
+      {/* App routes with AppShell layout */}
       <Route path="/" element={<AppShell />}>
-        {/* Home - Search/Dictionary (public) */}
+        {/* Public routes (no auth required) */}
         <Route index element={<SearchPage />} />
         <Route path="search" element={<SearchPage />} />
-
-        {/* Community browsing (public) */}
         <Route path="community" element={<CommunityPage />} />
-      </Route>
 
-      {/* Protected app routes */}
-      <Route path="/" element={
-        <ProtectedRoute>
-          <AppShell />
-        </ProtectedRoute>
-      }>
-        {/* Decks (protected) */}
-        <Route path="decks" element={<DecksPage />} />
-
-        {/* Add word */}
-        <Route path="add" element={<AddWordPage />} />
-
-        {/* Import deck */}
-        <Route path="import" element={<ImportPage />} />
-
-        {/* Deck detail */}
-        <Route path="decks/:deckId" element={<DeckDetailPage />} />
-
-        {/* Settings */}
-        <Route path="settings" element={<SettingsPage />} />
+        {/* Protected routes */}
+        <Route path="decks" element={
+          <ProtectedRoute>
+            <DecksPage />
+          </ProtectedRoute>
+        } />
+        <Route path="decks/:deckId" element={
+          <ProtectedRoute>
+            <DeckDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="add" element={
+          <ProtectedRoute>
+            <AddWordPage />
+          </ProtectedRoute>
+        } />
+        <Route path="import" element={
+          <ProtectedRoute>
+            <ImportPage />
+          </ProtectedRoute>
+        } />
+        <Route path="settings" element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        } />
       </Route>
 
       {/* Catch all - redirect to home/search */}
