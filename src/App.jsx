@@ -80,12 +80,14 @@ function AppRoutes() {
       } />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Public browsing routes (no auth required) */}
-      <Route path="/dictionary" element={<AppShell />}>
+      {/* Public routes (no auth required) */}
+      <Route path="/" element={<AppShell />}>
+        {/* Home - Search/Dictionary (public) */}
         <Route index element={<SearchPage />} />
-      </Route>
-      <Route path="/browse" element={<AppShell />}>
-        <Route index element={<CommunityPage />} />
+        <Route path="search" element={<SearchPage />} />
+
+        {/* Community browsing (public) */}
+        <Route path="community" element={<CommunityPage />} />
       </Route>
 
       {/* Protected app routes */}
@@ -94,11 +96,8 @@ function AppRoutes() {
           <AppShell />
         </ProtectedRoute>
       }>
-        {/* Home - Decks page */}
-        <Route index element={<DecksPage />} />
-
-        {/* Search */}
-        <Route path="search" element={<SearchPage />} />
+        {/* Decks (protected) */}
+        <Route path="decks" element={<DecksPage />} />
 
         {/* Add word */}
         <Route path="add" element={<AddWordPage />} />
@@ -109,15 +108,12 @@ function AppRoutes() {
         {/* Deck detail */}
         <Route path="decks/:deckId" element={<DeckDetailPage />} />
 
-        {/* Community */}
-        <Route path="community" element={<CommunityPage />} />
-
         {/* Settings */}
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
-      {/* Catch all - redirect to dictionary for public access */}
-      <Route path="*" element={<Navigate to="/dictionary" replace />} />
+      {/* Catch all - redirect to home/search */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
