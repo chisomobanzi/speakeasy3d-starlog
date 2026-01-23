@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { DEMO_AMIS_ENTRIES } from '../data/demoPersonalDeck';
 
 // DEV MODE: Set to true to use mock data
 const DEV_MODE = true;
 
 // Mock entries for development
 const MOCK_ENTRIES = {
+  'demo-amis-personal': DEMO_AMIS_ENTRIES,
   'mock-deck-1': [
     {
       id: 'entry-1',
