@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen, Search, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDecks } from '../hooks/useDecks';
 import { useEntries } from '../hooks/useEntries';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import Input from '../components/ui/Input';
 import EntryCard from '../components/starlog/EntryCard';
 import ConstellationView from '../components/starlog/ConstellationView';
 import { EntryCardSkeleton } from '../components/ui/LoadingSpinner';
@@ -25,6 +26,7 @@ export default function DeckDetailPage() {
   const [deck, setDeck] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadDeck();
@@ -67,6 +69,19 @@ export default function DeckDetailPage() {
     const audio = new Audio(url);
     await audio.play();
   };
+
+  // Filter entries by search
+  const filteredEntries = useMemo(() => {
+    if (!searchQuery) return entries;
+    const query = searchQuery.toLowerCase();
+    return entries.filter(entry =>
+      entry.word?.toLowerCase().includes(query) ||
+      entry.translation?.toLowerCase().includes(query) ||
+      entry.phonetic?.toLowerCase().includes(query) ||
+      entry.notes?.toLowerCase().includes(query) ||
+      entry.tags?.some(t => t.toLowerCase().includes(query))
+    );
+  }, [entries, searchQuery]);
 
   // Get review stats
   const stats = getReviewStats(entries);
@@ -156,6 +171,33 @@ export default function DeckDetailPage() {
             </div>
           )}
 
+          {/* Search */}
+          {entries.length > 0 && (
+            <div className="relative">
+              <Input
+                placeholder="Search words, translations, tags..."
+                icon={Search}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Filtered count */}
+          {searchQuery && (
+            <p className="text-sm text-slate-400">
+              {filteredEntries.length} of {entries.length} word{entries.length !== 1 ? 's' : ''} matching "{searchQuery}"
+            </p>
+          )}
+
           {/* Entries list */}
           {loading ? (
             <div className="space-y-4">
@@ -163,7 +205,7 @@ export default function DeckDetailPage() {
               <EntryCardSkeleton />
               <EntryCardSkeleton />
             </div>
-          ) : entries.length === 0 ? (
+          ) : filteredEntries.length === 0 && !searchQuery ? (
             <Card className="text-center py-12">
               <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-white mb-2">No words yet</h3>
@@ -177,13 +219,21 @@ export default function DeckDetailPage() {
                 </Button>
               </Link>
             </Card>
+          ) : filteredEntries.length === 0 && searchQuery ? (
+            <Card className="text-center py-8">
+              <Search className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+              <p className="text-slate-400">No words matching "{searchQuery}"</p>
+              <Button variant="ghost" onClick={() => setSearchQuery('')} className="mt-2">
+                Clear search
+              </Button>
+            </Card>
           ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="space-y-3"
             >
-              {entries.map((entry, index) => (
+              {filteredEntries.map((entry, index) => (
                 <motion.div
                   key={entry.id}
                   initial={{ opacity: 0, y: 20 }}
