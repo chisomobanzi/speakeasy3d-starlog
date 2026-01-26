@@ -7,6 +7,7 @@ import Button from '../ui/Button';
 
 export default function EntryCard({
   entry,
+  onClick,
   onEdit,
   onDelete,
   onCopy,
@@ -41,11 +42,12 @@ export default function EntryCard({
   };
 
   if (compact) {
+    const compactHandler = onClick || onEdit;
     return (
       <Card
-        hover
+        hover={!!compactHandler}
         className={`flex items-center gap-3 ${className}`}
-        onClick={() => onEdit?.(entry)}
+        onClick={compactHandler ? () => compactHandler(entry) : undefined}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -66,7 +68,11 @@ export default function EntryCard({
   }
 
   return (
-    <Card className={`relative ${className}`}>
+    <Card
+      hover={!!onClick}
+      className={`relative ${className}`}
+      onClick={onClick ? () => onClick(entry) : undefined}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -99,7 +105,7 @@ export default function EntryCard({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
           >
             <MoreVertical className="w-5 h-5" />
           </Button>
@@ -111,14 +117,14 @@ export default function EntryCard({
               className="absolute right-0 top-full mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-10"
             >
               <button
-                onClick={() => { onEdit?.(entry); setShowMenu(false); }}
+                onClick={(e) => { e.stopPropagation(); onEdit?.(entry); setShowMenu(false); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
               >
                 <Edit className="w-4 h-4" />
                 Edit
               </button>
               <button
-                onClick={() => { onCopy?.(entry); setShowMenu(false); }}
+                onClick={(e) => { e.stopPropagation(); onCopy?.(entry); setShowMenu(false); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
               >
                 <Copy className="w-4 h-4" />
@@ -126,7 +132,7 @@ export default function EntryCard({
               </button>
               {showSaveAction && (
                 <button
-                  onClick={() => { onSave?.(entry); setShowMenu(false); }}
+                  onClick={(e) => { e.stopPropagation(); onSave?.(entry); setShowMenu(false); }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-green-400 hover:bg-green-500/10"
                 >
                   <Plus className="w-4 h-4" />
@@ -134,7 +140,7 @@ export default function EntryCard({
                 </button>
               )}
               <button
-                onClick={() => { onDelete?.(entry); setShowMenu(false); }}
+                onClick={(e) => { e.stopPropagation(); onDelete?.(entry); setShowMenu(false); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
               >
                 <Trash2 className="w-4 h-4" />

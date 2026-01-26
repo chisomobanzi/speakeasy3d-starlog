@@ -3,16 +3,19 @@ import { Search, Filter, X, Loader2 } from 'lucide-react';
 import EntryCard from './EntryCard';
 import SourceSelector from './SourceSelector';
 import AddToDeckModal from './AddToDeckModal';
+import WordDetailModal from './WordDetailModal';
 import { useDictionarySearch } from '../../hooks/useDictionarySearch';
 import { useEntries } from '../../hooks/useEntries';
 import { useDecks } from '../../hooks/useDecks';
 import { SOURCES } from '../../lib/dictionarySources';
 import Button from '../ui/Button';
+import { useToast } from '../ui/Toast';
 import { EntryCardSkeleton } from '../ui/LoadingSpinner';
 
 export default function LookupTab() {
   const { decks, fetchDecks } = useDecks();
   const { createEntry } = useEntries();
+  const toast = useToast();
 
   const {
     query,
@@ -38,7 +41,10 @@ export default function LookupTab() {
   // Save to deck flow
   const [savingEntry, setSavingEntry] = useState(null);
   const [showDeckModal, setShowDeckModal] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(null);
+
+  // Word detail modal
+  const [detailEntry, setDetailEntry] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const debounceRef = useRef(null);
 
@@ -69,9 +75,18 @@ export default function LookupTab() {
     search(term);
   }, [search]);
 
-  const handleSelectResult = (entry) => {
-    console.log('Selected:', entry);
-  };
+  const handleSelectResult = useCallback((entry) => {
+    setDetailEntry(entry);
+    setShowDetailModal(true);
+  }, []);
+
+  const handleSaveToDeckFromDetail = useCallback((enrichedEntry) => {
+    setShowDetailModal(false);
+    setDetailEntry(null);
+    setSavingEntry(enrichedEntry);
+    setShowDeckModal(true);
+    fetchDecks();
+  }, [fetchDecks]);
 
   // Save external result to deck
   const handleSaveToDeck = useCallback((entry) => {
@@ -99,13 +114,12 @@ export default function LookupTab() {
 
     const { error } = await createEntry(entryData);
     if (!error) {
-      setSaveSuccess(savingEntry.word);
-      setTimeout(() => setSaveSuccess(null), 2000);
+      toast.success(`Saved "${savingEntry.word}" to your deck`);
     }
 
     setSavingEntry(null);
     setShowDeckModal(false);
-  }, [savingEntry, createEntry]);
+  }, [savingEntry, createEntry, toast]);
 
   const renderSourceBadge = (source) => {
     if (!source) return null;
@@ -218,13 +232,6 @@ export default function LookupTab() {
         )}
       </div>
 
-      {/* Save success toast */}
-      {saveSuccess && (
-        <div className="px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-sm">
-          Saved "{saveSuccess}" to your deck
-        </div>
-      )}
-
       {/* Recent searches */}
       {!hasResults && !isAnyLoading && !hasQuery && recentSearches.length > 0 && (
         <div>
@@ -274,7 +281,7 @@ export default function LookupTab() {
                     key={entry.id}
                     entry={entry}
                     showDeck={source.id === 'personal'}
-                    onEdit={handleSelectResult}
+                    onClick={handleSelectResult}
                     sourceBadge={renderSourceBadge(source)}
                     showSaveAction={isExternal}
                     onSave={isExternal ? handleSaveToDeck : undefined}
@@ -289,6 +296,14 @@ export default function LookupTab() {
           No results found for "{localQuery}"
         </div>
       ) : null}
+
+      {/* Word detail modal */}
+      <WordDetailModal
+        isOpen={showDetailModal}
+        onClose={() => { setShowDetailModal(false); setDetailEntry(null); }}
+        entry={detailEntry}
+        onSaveToDeck={handleSaveToDeckFromDetail}
+      />
 
       {/* Add to deck modal */}
       <AddToDeckModal
