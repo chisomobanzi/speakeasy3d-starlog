@@ -52,7 +52,7 @@ export default function Sidebar({ className = '' }) {
             <span className="text-white font-bold">S</span>
           </div>
           <div>
-            <h1 className="font-semibold text-white">Speakeasy</h1>
+            <h1 className="font-semibold text-white">Starlog</h1>
             <p className="text-xs text-slate-500">Language Platform</p>
           </div>
         </div>
