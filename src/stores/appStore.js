@@ -23,6 +23,9 @@ export const useAppStore = create(
       recentDecks: [],
       recentSearches: [],
 
+      // Dictionary source toggles
+      enabledSources: ['personal', 'community', 'freeDictionary', 'wiktionary'],
+
       // User preferences
       preferences: {
         dailyGoal: 10,
@@ -50,6 +53,12 @@ export const useAppStore = create(
       })),
 
       clearRecentSearches: () => set({ recentSearches: [] }),
+
+      toggleSource: (sourceId) => set((state) => ({
+        enabledSources: state.enabledSources.includes(sourceId)
+          ? state.enabledSources.filter(id => id !== sourceId)
+          : [...state.enabledSources, sourceId]
+      })),
 
       // Offline queue management
       addToOfflineQueue: (action) => set((state) => ({
@@ -84,6 +93,7 @@ export const useAppStore = create(
         recentSearches: state.recentSearches,
         preferences: state.preferences,
         offlineQueue: state.offlineQueue,
+        enabledSources: state.enabledSources,
       }),
     }
   )

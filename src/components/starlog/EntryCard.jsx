@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, MoreVertical, Edit, Trash2, Copy, Volume2 } from 'lucide-react';
+import { Play, Pause, MoreVertical, Edit, Trash2, Copy, Volume2, Plus } from 'lucide-react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -14,6 +14,9 @@ export default function EntryCard({
   showDeck = false,
   compact = false,
   className = '',
+  sourceBadge = null,
+  showSaveAction = false,
+  onSave,
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -69,6 +72,7 @@ export default function EntryCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-lg font-semibold text-white">{entry.word}</h3>
+            {sourceBadge}
             {entry.phonetic && (
               <span className="text-slate-500">/{entry.phonetic}/</span>
             )}
@@ -120,6 +124,15 @@ export default function EntryCard({
                 <Copy className="w-4 h-4" />
                 Copy to deck
               </button>
+              {showSaveAction && (
+                <button
+                  onClick={() => { onSave?.(entry); setShowMenu(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-green-400 hover:bg-green-500/10"
+                >
+                  <Plus className="w-4 h-4" />
+                  Save to Deck
+                </button>
+              )}
               <button
                 onClick={() => { onDelete?.(entry); setShowMenu(false); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
