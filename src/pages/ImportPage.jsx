@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
@@ -59,13 +59,27 @@ const COLOR_OPTIONS = [
 
 export default function ImportPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { success, error } = useToast();
-  const { createDeck } = useDecks();
+  const { decks, createDeck } = useDecks();
   const { createEntry } = useEntries();
   const fileInputRef = useRef(null);
 
+  // Pre-select deck from query param (e.g. /import?deck=mock-deck-1)
+  const preselectedDeckId = searchParams.get('deck');
+  useEffect(() => {
+    if (preselectedDeckId && decks.some(d => d.id === preselectedDeckId)) {
+      setImportMode('existing');
+      setSelectedDeckId(preselectedDeckId);
+    }
+  }, [preselectedDeckId, decks]);
+
   // Step state: 'input' | 'preview' | 'importing' | 'success'
   const [step, setStep] = useState('input');
+
+  // Import mode: 'new' (create new deck) or 'existing' (add to existing deck)
+  const [importMode, setImportMode] = useState('new');
+  const [selectedDeckId, setSelectedDeckId] = useState('');
 
   // Form data
   const [deckName, setDeckName] = useState('');
@@ -113,11 +127,15 @@ export default function ImportPage() {
     const lines = text.trim().split('\n');
     if (lines.length < 2) throw new Error('CSV must have at least a header and one row');
 
-    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
     const wordIndex = header.findIndex(h => h === 'word' || h === 'front');
     const translationIndex = header.findIndex(h => h === 'translation' || h === 'back' || h === 'meaning');
     const phoneticIndex = header.findIndex(h => h === 'phonetic' || h === 'pronunciation' || h === 'pinyin');
     const notesIndex = header.findIndex(h => h === 'notes' || h === 'note');
+    const tagsIndex = header.findIndex(h => h === 'tags' || h === 'tag');
+    const masteryIndex = header.findIndex(h => h === 'mastery' || h === 'mastery_level');
+    const streakIndex = header.findIndex(h => h === 'streak');
+    const reviewCountIndex = header.findIndex(h => h === 'review_count' || h === 'reviews');
 
     if (wordIndex === -1) throw new Error('CSV must have a "Word" or "Front" column');
 
@@ -125,11 +143,22 @@ export default function ImportPage() {
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCSVLine(lines[i]);
       if (cols[wordIndex] && cols[wordIndex].trim()) {
+        const mastery = masteryIndex >= 0 ? parseFloat(cols[masteryIndex]) : NaN;
+        const streak = streakIndex >= 0 ? parseInt(cols[streakIndex], 10) : NaN;
+        const reviewCount = reviewCountIndex >= 0 ? parseInt(cols[reviewCountIndex], 10) : NaN;
+        const tagsRaw = tagsIndex >= 0 ? (cols[tagsIndex] || '').trim() : '';
+
         words.push({
           word: cols[wordIndex].trim(),
           translation: translationIndex >= 0 ? (cols[translationIndex] || '').trim() : '',
           phonetic: phoneticIndex >= 0 ? (cols[phoneticIndex] || '').trim() : '',
           notes: notesIndex >= 0 ? (cols[notesIndex] || '').trim() : '',
+          tags: tagsRaw ? tagsRaw.split(/[;|]/).map(t => t.trim()).filter(Boolean) : [],
+          // SRS fields - NaN means not provided, will default to zero
+          mastery_level: isNaN(mastery) ? 0 : Math.max(0, Math.min(1, mastery)),
+          streak: isNaN(streak) ? 0 : Math.max(0, streak),
+          review_count: isNaN(reviewCount) ? 0 : Math.max(0, reviewCount),
+          _hasMastery: !isNaN(mastery) || !isNaN(streak) || !isNaN(reviewCount),
         });
       }
     }
@@ -157,8 +186,13 @@ export default function ImportPage() {
   };
 
   const handleParse = () => {
-    if (!targetLanguage) {
+    if (importMode === 'new' && !targetLanguage) {
       setParseError('Please select the language you are learning');
+      return;
+    }
+
+    if (importMode === 'existing' && !selectedDeckId) {
+      setParseError('Please select a deck to import into');
       return;
     }
 
@@ -181,7 +215,7 @@ export default function ImportPage() {
   };
 
   const handleImport = async () => {
-    if (!deckName.trim()) {
+    if (importMode === 'new' && !deckName.trim()) {
       error('Please enter a deck name');
       return;
     }
@@ -190,39 +224,69 @@ export default function ImportPage() {
     setImportProgress({ current: 0, total: parsedWords.length });
 
     try {
-      // Create the deck
-      const { data: newDeck, error: deckError } = await createDeck({
-        name: deckName.trim(),
-        target_language: targetLanguage,
-        color: deckColor,
-        description: `Imported ${parsedWords.length} words from CSV`,
-      });
+      let deckId;
+      let lang;
 
-      if (deckError) {
-        throw new Error('Failed to create deck');
+      if (importMode === 'existing') {
+        // Import into existing deck
+        deckId = selectedDeckId;
+        const existingDeck = decks.find(d => d.id === selectedDeckId);
+        lang = existingDeck?.target_language || targetLanguage || 'und';
+        setCreatedDeckId(deckId);
+      } else {
+        // Create a new deck
+        const { data: newDeck, error: deckError } = await createDeck({
+          name: deckName.trim(),
+          target_language: targetLanguage,
+          color: deckColor,
+          description: `Imported ${parsedWords.length} words from CSV`,
+        });
+
+        if (deckError) {
+          throw new Error('Failed to create deck');
+        }
+
+        deckId = newDeck.id;
+        lang = targetLanguage;
+        setCreatedDeckId(deckId);
       }
 
-      setCreatedDeckId(newDeck.id);
-
       // Create entries for each word
+      const hasMasteryData = parsedWords.some(w => w._hasMastery);
+
       for (let i = 0; i < parsedWords.length; i++) {
         const word = parsedWords[i];
 
-        await createEntry({
-          deck_id: newDeck.id,
+        const entryData = {
+          deck_id: deckId,
           word: word.word,
           translation: word.translation,
           phonetic: word.phonetic,
           notes: word.notes,
-          language: targetLanguage,
+          language: lang,
           source_type: 'import',
-        });
+          tags: word.tags?.length > 0 ? word.tags : undefined,
+        };
+
+        // Include mastery data if provided
+        if (word._hasMastery) {
+          entryData.mastery_level = word.mastery_level;
+          entryData.streak = word.streak;
+          entryData.review_count = word.review_count;
+          entryData.srs_state = word.mastery_level >= 0.8 ? 'active' : word.review_count > 0 ? 'active' : 'new';
+        }
+
+        await createEntry(entryData);
 
         setImportProgress({ current: i + 1, total: parsedWords.length });
       }
 
+      const deckLabel = importMode === 'existing'
+        ? decks.find(d => d.id === selectedDeckId)?.name || 'deck'
+        : deckName;
+
       setStep('success');
-      success(`Imported ${parsedWords.length} words!`);
+      success(`Imported ${parsedWords.length} words into "${deckLabel}"!`);
     } catch (err) {
       setParseError(err.message || 'Import failed');
       setStep('preview');
@@ -232,6 +296,8 @@ export default function ImportPage() {
 
   const reset = () => {
     setStep('input');
+    setImportMode('new');
+    setSelectedDeckId('');
     setDeckName('');
     setDeckColor('#10b981');
     setTargetLanguage('');
@@ -407,8 +473,8 @@ export default function ImportPage() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-white">Import Deck</h1>
-          <p className="text-slate-400 text-sm">Upload a CSV file with your vocabulary</p>
+          <h1 className="text-2xl font-bold text-white">Import Words</h1>
+          <p className="text-slate-400 text-sm">Upload a CSV file to a new or existing deck</p>
         </div>
       </div>
 
@@ -422,7 +488,86 @@ export default function ImportPage() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* Language Selection */}
+            {/* Import Mode Toggle */}
+            <Card className="p-6">
+              <h2 className="text-lg font-bold text-white mb-4">Import to...</h2>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setImportMode('new'); setSelectedDeckId(''); }}
+                  className={`flex-1 p-4 rounded-lg border-2 transition-all text-left ${
+                    importMode === 'new'
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                  }`}
+                >
+                  <Plus size={20} className={importMode === 'new' ? 'text-cyan-400' : 'text-slate-500'} />
+                  <p className={`font-medium mt-2 ${importMode === 'new' ? 'text-white' : 'text-slate-300'}`}>
+                    New Deck
+                  </p>
+                  <p className="text-sm text-slate-500 mt-1">Create a new deck with imported words</p>
+                </button>
+                <button
+                  onClick={() => setImportMode('existing')}
+                  className={`flex-1 p-4 rounded-lg border-2 transition-all text-left ${
+                    importMode === 'existing'
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                  }`}
+                >
+                  <FileText size={20} className={importMode === 'existing' ? 'text-cyan-400' : 'text-slate-500'} />
+                  <p className={`font-medium mt-2 ${importMode === 'existing' ? 'text-white' : 'text-slate-300'}`}>
+                    Existing Deck
+                  </p>
+                  <p className="text-sm text-slate-500 mt-1">Add words to a deck you already have</p>
+                </button>
+              </div>
+
+              {/* Existing deck selector */}
+              {importMode === 'existing' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4"
+                >
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Select deck</label>
+                  {decks.length === 0 ? (
+                    <p className="text-slate-500 text-sm">No decks yet. Create one first or switch to "New Deck".</p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {decks.map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => setSelectedDeckId(d.id)}
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                            selectedDeckId === d.id
+                              ? 'border-cyan-500 bg-cyan-500/10'
+                              : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                          }`}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: d.color || '#10b981' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium truncate">{d.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {d.word_count || 0} words
+                              {d.target_language ? ` \u00b7 ${d.target_language.toUpperCase()}` : ''}
+                            </p>
+                          </div>
+                          {selectedDeckId === d.id && (
+                            <CheckCircle size={18} className="text-cyan-400 flex-shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </Card>
+
+            {/* Language Selection & Deck Config - only for new decks */}
+            {importMode === 'new' && (<>
             <Card className="p-6 relative z-20">
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-10 h-10 bg-purple-500/20 border border-purple-500/50 rounded-lg flex items-center justify-center">
@@ -504,6 +649,7 @@ export default function ImportPage() {
                 </div>
               </div>
             </Card>
+            </>)}
 
             {/* Upload Area */}
             <Card className="p-6">
@@ -593,12 +739,22 @@ export default function ImportPage() {
                 variant="primary"
                 className="w-full"
                 onClick={handleParse}
-                disabled={!targetLanguage}
+                disabled={importMode === 'new' ? !targetLanguage : !selectedDeckId}
               >
-                {!targetLanguage ? (
+                {importMode === 'new' && !targetLanguage ? (
                   <>
                     <Globe size={20} />
                     Select target language first
+                  </>
+                ) : importMode === 'existing' && !selectedDeckId ? (
+                  <>
+                    <FileText size={20} />
+                    Select a deck first
+                  </>
+                ) : importMode === 'existing' ? (
+                  <>
+                    <CheckCircle size={20} />
+                    Parse &amp; Add to {decks.find(d => d.id === selectedDeckId)?.name || 'Deck'}
                   </>
                 ) : (
                   <>
@@ -626,10 +782,23 @@ export default function ImportPage() {
                   <CheckCircle size={20} className="text-green-400" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">{deckName || 'Imported Deck'}</h3>
+                  <h3 className="text-xl font-bold text-white">
+                    {importMode === 'existing'
+                      ? decks.find(d => d.id === selectedDeckId)?.name || 'Selected Deck'
+                      : deckName || 'New Deck'
+                    }
+                  </h3>
                   <p className="text-slate-400">
-                    {getLanguageInfo(nativeLanguage).flag} → {getLanguageInfo(targetLanguage).flag} • {parsedWords.length} words
+                    {importMode === 'existing'
+                      ? `Adding ${parsedWords.length} words to existing deck`
+                      : `${getLanguageInfo(nativeLanguage).flag} → ${getLanguageInfo(targetLanguage).flag} • ${parsedWords.length} words`
+                    }
                   </p>
+                  {parsedWords.some(w => w._hasMastery) && (
+                    <p className="text-green-400 text-sm mt-1">
+                      Mastery data detected — progress will be imported
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -643,9 +812,16 @@ export default function ImportPage() {
                         <span className="text-slate-500 ml-2 text-sm">/{word.phonetic}/</span>
                       )}
                     </div>
-                    {word.translation && (
-                      <span className="text-cyan-400 text-sm">{word.translation}</span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {word._hasMastery && (
+                        <span className="text-xs text-slate-500">
+                          {Math.round(word.mastery_level * 100)}%
+                        </span>
+                      )}
+                      {word.translation && (
+                        <span className="text-cyan-400 text-sm">{word.translation}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {parsedWords.length > 10 && (
@@ -655,35 +831,39 @@ export default function ImportPage() {
                 )}
               </div>
 
-              {/* Deck Name Input */}
-              <Input
-                label="Deck Name"
-                value={deckName}
-                onChange={(e) => setDeckName(e.target.value)}
-                placeholder="Enter deck name"
-                className="mb-4"
-              />
+              {/* Deck Name Input - only for new decks */}
+              {importMode === 'new' && (
+                <>
+                  <Input
+                    label="Deck Name"
+                    value={deckName}
+                    onChange={(e) => setDeckName(e.target.value)}
+                    placeholder="Enter deck name"
+                    className="mb-4"
+                  />
 
-              {/* Color Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Color
-                </label>
-                <div className="flex gap-2">
-                  {COLOR_OPTIONS.map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setDeckColor(color)}
-                      className={`
-                        w-8 h-8 rounded-full transition-transform
-                        ${deckColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110' : ''}
-                      `}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
+                  {/* Color Selection */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Color
+                    </label>
+                    <div className="flex gap-2">
+                      {COLOR_OPTIONS.map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setDeckColor(color)}
+                          className={`
+                            w-8 h-8 rounded-full transition-transform
+                            ${deckColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110' : ''}
+                          `}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3">
@@ -776,10 +956,10 @@ export default function ImportPage() {
 
           <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4">
             <pre className="text-slate-300">
-{`Word,Translation,Phonetic
-你好,hello,nǐ hǎo
-谢谢,thank you,xiè xiè
-再见,goodbye,zài jiàn`}
+{`Word,Translation,Phonetic,Tags,Mastery,Streak
+你好,hello,nǐ hǎo,greeting|essential,0.9,8
+谢谢,thank you,xiè xiè,greeting,0.6,3
+再见,goodbye,zài jiàn,greeting,,`}
             </pre>
           </div>
 
@@ -790,11 +970,15 @@ export default function ImportPage() {
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong className="text-white">Translation</strong> column is optional (your native language)</span>
+              <span><strong className="text-white">Translation</strong>, <strong className="text-white">Phonetic</strong>, <strong className="text-white">Notes</strong> are optional</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong className="text-white">Phonetic</strong> column is optional (pronunciation guide)</span>
+              <span><strong className="text-white">Tags</strong> column is optional (separate with <code className="text-cyan-400">|</code> or <code className="text-cyan-400">;</code>)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+              <span><strong className="text-white">Mastery</strong>, <strong className="text-white">Streak</strong>, <strong className="text-white">Review_Count</strong> are optional (blank = start from zero)</span>
             </li>
           </ul>
         </Card>

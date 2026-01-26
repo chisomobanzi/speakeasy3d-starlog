@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, BookOpen, Search, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDecks } from '../hooks/useDecks';
 import { useEntries } from '../hooks/useEntries';
@@ -126,12 +126,20 @@ export default function DeckDetailPage() {
           <Badge>{entries.length} words</Badge>
           <Badge variant="primary">{deck.target_language?.toUpperCase()}</Badge>
         </div>
-        <Link to="/add">
-          <Button variant="secondary" size="sm">
-            <Plus className="w-4 h-4" />
-            Add
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to={`/import?deck=${deckId}`}>
+            <Button variant="ghost" size="sm">
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
+          </Link>
+          <Link to="/add">
+            <Button variant="secondary" size="sm">
+              <Plus className="w-4 h-4" />
+              Add
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Side-by-side layout on desktop */}
