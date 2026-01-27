@@ -47,7 +47,7 @@ export default function Header() {
                 <span className="text-white font-bold text-sm">S</span>
               </div>
               <span className="font-semibold text-white">
-                Speakeasy3D
+                Starlog
               </span>
             </Link>
           </div>
