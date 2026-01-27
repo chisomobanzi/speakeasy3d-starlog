@@ -75,8 +75,10 @@ function stripHtml(html) {
  */
 function extractFormOf(htmlDef) {
   if (!htmlDef) return null;
-  // Wiktionary form-of defs end with "of <a href="...">rootWord</a>"
-  const match = htmlDef.match(/\bof\s+<a[^>]*>([^<]+)<\/a>\s*$/i);
+  // Wiktionary wraps form-of definitions in <span class="form-of-definition ...">
+  if (!htmlDef.includes('form-of-definition')) return null;
+  // Extract root word from the form-of-definition-link span's inner <a> tag
+  const match = htmlDef.match(/form-of-definition-link[^>]*>.*?<a[^>]*>([^<]+)<\/a>/i);
   if (!match) return null;
   return {
     rootWord: match[1].trim(),

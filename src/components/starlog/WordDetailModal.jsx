@@ -170,6 +170,15 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
 
     return (
       <div className="space-y-5">
+        {fullData.inflectionNote && (
+          <div className="px-3 py-2 bg-slate-800/60 border border-slate-700/50 rounded-lg text-sm text-slate-400">
+            <span className="text-slate-500">Form:</span>{' '}
+            {fullData.inflectionNote}
+            {fullData.rootWord && (
+              <span className="text-slate-500"> — showing definitions for <span className="text-slate-300 font-medium">{fullData.rootWord}</span></span>
+            )}
+          </div>
+        )}
         {fullData.meanings.map((meaning, mIdx) => (
           <div key={mIdx}>
             <h4 className="text-sm font-semibold text-starlog-400 uppercase tracking-wide mb-2">

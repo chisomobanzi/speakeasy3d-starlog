@@ -34,6 +34,20 @@ function stripHtml(html) {
 }
 
 /**
+ * Detect Wiktionary form-of definitions and extract the root word.
+ */
+function extractFormOf(htmlDef) {
+  if (!htmlDef) return null;
+  if (!htmlDef.includes('form-of-definition')) return null;
+  const match = htmlDef.match(/form-of-definition-link[^>]*>.*?<a[^>]*>([^<]+)<\/a>/i);
+  if (!match) return null;
+  return {
+    rootWord: match[1].trim(),
+    inflection: stripHtml(htmlDef),
+  };
+}
+
+/**
  * Fetch full entry from Free Dictionary API.
  * Returns all definitions grouped by part of speech.
  */
@@ -96,32 +110,147 @@ export async function fetchFullWiktionary(word, language = 'en') {
   if (!res.ok) return null;
 
   const data = await res.json();
-  const targetLang = LANG_MAP[language];
+  const targetLang = language ? LANG_MAP[language] : null;
 
   // Find matching language section
   let sections = null;
+  let langName = targetLang;
   if (targetLang && data[targetLang]) {
     sections = data[targetLang];
   } else {
     // Fall back to first available language
     const firstKey = Object.keys(data)[0];
-    if (firstKey) sections = data[firstKey];
+    if (firstKey) {
+      sections = data[firstKey];
+      langName = firstKey;
+    }
   }
 
   if (!sections || !Array.isArray(sections)) return null;
 
-  const meanings = sections
+  // Check if all definitions are form-of; if so, resolve the root word
+  const allDefs = sections.flatMap(s => (s.definitions || []).map(d => d.definition || ''));
+  const formOfs = allDefs.map(extractFormOf).filter(Boolean);
+
+  // If every definition is a form-of, fetch the root word's full entry instead
+  if (formOfs.length > 0 && formOfs.length === allDefs.filter(d => stripHtml(d)).length) {
+    // Use the first root word found
+    const rootWord = formOfs[0].rootWord;
+    const inflectionNote = formOfs[0].inflection;
+
+    try {
+      const rootRes = await fetch(`${WIKTIONARY_API}/${encodeURIComponent(rootWord)}`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (rootRes.ok) {
+        const rootData = await rootRes.json();
+        const rootSections = rootData[langName];
+        if (rootSections && Array.isArray(rootSections)) {
+          const rootMeanings = rootSections
+            .filter(section => section.definitions?.length > 0)
+            .map(section => ({
+              partOfSpeech: section.partOfSpeech || 'other',
+              definitions: section.definitions
+                .filter(def => !extractFormOf(def.definition || ''))
+                .map(def => ({
+                  definition: stripHtml(def.definition || ''),
+                  example: (def.examples || []).map(ex => stripHtml(ex)).filter(Boolean).join(' | '),
+                  synonyms: [],
+                  antonyms: [],
+                }))
+                .filter(d => d.definition),
+            }))
+            .filter(m => m.definitions.length > 0);
+
+          if (rootMeanings.length > 0) {
+            return {
+              word,
+              phonetic: '',
+              audio_url: null,
+              language,
+              source_type: 'wiktionary',
+              contributor_name: 'Wiktionary',
+              meanings: rootMeanings,
+              rootWord,
+              inflectionNote,
+            };
+          }
+        }
+      }
+    } catch {
+      // Fall through to regular output
+    }
+  }
+
+  // Standard path: build meanings, marking form-of definitions with resolved text
+  const rootWordsToFetch = new Map();
+  const rawMeanings = sections
     .filter(section => section.definitions?.length > 0)
     .map(section => ({
       partOfSpeech: section.partOfSpeech || 'other',
-      definitions: section.definitions.map(def => ({
-        definition: stripHtml(def.definition || ''),
-        example: (def.examples || []).map(ex => stripHtml(ex)).filter(Boolean).join(' | '),
-        synonyms: [],
-        antonyms: [],
-      })).filter(d => d.definition),
+      definitions: section.definitions.map(def => {
+        const raw = def.definition || '';
+        const formOf = extractFormOf(raw);
+        if (formOf) {
+          rootWordsToFetch.set(formOf.rootWord, langName);
+        }
+        return {
+          definition: stripHtml(raw),
+          example: (def.examples || []).map(ex => stripHtml(ex)).filter(Boolean).join(' | '),
+          synonyms: [],
+          antonyms: [],
+          _formOf: formOf,
+        };
+      }).filter(d => d.definition),
     }))
     .filter(m => m.definitions.length > 0);
+
+  // Resolve any form-of definitions to actual meanings
+  if (rootWordsToFetch.size > 0) {
+    const fetches = await Promise.allSettled(
+      [...rootWordsToFetch.entries()].slice(0, 3).map(async ([rootWord, rootLang]) => {
+        const rootRes = await fetch(`${WIKTIONARY_API}/${encodeURIComponent(rootWord)}`, {
+          headers: { 'Accept': 'application/json' },
+        });
+        if (!rootRes.ok) return { rootWord, def: null };
+        const rootData = await rootRes.json();
+        const rootSections = rootData[rootLang];
+        if (!rootSections) return { rootWord, def: null };
+        for (const section of rootSections) {
+          for (const d of section.definitions || []) {
+            if (extractFormOf(d.definition || '')) continue;
+            const text = stripHtml(d.definition || '');
+            if (text) return { rootWord, def: text };
+          }
+        }
+        return { rootWord, def: null };
+      })
+    );
+
+    const rootDefMap = new Map();
+    for (const outcome of fetches) {
+      if (outcome.status === 'fulfilled' && outcome.value.def) {
+        rootDefMap.set(outcome.value.rootWord, outcome.value.def);
+      }
+    }
+
+    for (const meaning of rawMeanings) {
+      for (const def of meaning.definitions) {
+        if (def._formOf) {
+          const resolved = rootDefMap.get(def._formOf.rootWord);
+          if (resolved) {
+            def.definition = `${resolved} (${def._formOf.inflection})`;
+          }
+        }
+      }
+    }
+  }
+
+  // Clean up internal metadata
+  const meanings = rawMeanings.map(m => ({
+    ...m,
+    definitions: m.definitions.map(({ _formOf, ...rest }) => rest),
+  }));
 
   return {
     word,
