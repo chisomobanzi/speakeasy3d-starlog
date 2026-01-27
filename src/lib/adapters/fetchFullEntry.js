@@ -215,22 +215,25 @@ export async function fetchFullWiktionary(word, language = 'en') {
         if (!rootRes.ok) return { rootWord, def: null };
         const rootData = await rootRes.json();
         const rootSections = rootData[rootLang];
-        if (!rootSections) return { rootWord, def: null };
+        if (!rootSections) return { rootWord, def: null, example: '' };
         for (const section of rootSections) {
           for (const d of section.definitions || []) {
             if (extractFormOf(d.definition || '')) continue;
             const text = stripHtml(d.definition || '');
-            if (text) return { rootWord, def: text };
+            if (text) {
+              const example = (d.examples || []).map(ex => stripHtml(ex)).filter(Boolean).join(' | ');
+              return { rootWord, def: text, example };
+            }
           }
         }
-        return { rootWord, def: null };
+        return { rootWord, def: null, example: '' };
       })
     );
 
     const rootDefMap = new Map();
     for (const outcome of fetches) {
       if (outcome.status === 'fulfilled' && outcome.value.def) {
-        rootDefMap.set(outcome.value.rootWord, outcome.value.def);
+        rootDefMap.set(outcome.value.rootWord, outcome.value);
       }
     }
 
@@ -239,7 +242,10 @@ export async function fetchFullWiktionary(word, language = 'en') {
         if (def._formOf) {
           const resolved = rootDefMap.get(def._formOf.rootWord);
           if (resolved) {
-            def.definition = `${resolved} (${def._formOf.inflection})`;
+            def.definition = `${resolved.def} (${def._formOf.inflection})`;
+            if (!def.example && resolved.example) {
+              def.example = resolved.example;
+            }
           }
         }
       }

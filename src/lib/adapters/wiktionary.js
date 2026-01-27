@@ -109,7 +109,11 @@ async function fetchRootDefinitions(rootWord, langName) {
         if (extractFormOf(raw)) continue;
         const text = stripHtml(raw);
         if (text) {
-          defs.push(text);
+          const examples = (def.examples || [])
+            .map(ex => stripHtml(ex))
+            .filter(Boolean)
+            .slice(0, 2);
+          defs.push({ text, examples });
           if (defs.length >= 2) return defs;
         }
       }
@@ -257,7 +261,10 @@ export async function searchWiktionary(query, language = 'en') {
           const rootDefs = rootDefMap.get(key);
           if (rootDefs) {
             entry.notes = entry._formOf.inflection;
-            entry.translation = rootDefs[0];
+            entry.translation = rootDefs[0].text;
+            if (rootDefs[0].examples.length > 0 && entry.examples.length === 0) {
+              entry.examples = rootDefs[0].examples;
+            }
           }
         }
       }
