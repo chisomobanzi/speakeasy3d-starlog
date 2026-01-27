@@ -69,6 +69,55 @@ function stripHtml(html) {
     .trim();
 }
 
+/**
+ * Detect Wiktionary "form-of" definitions (e.g. "first-person singular present indicative of vender")
+ * and extract the root word from the HTML link before stripping.
+ */
+function extractFormOf(htmlDef) {
+  if (!htmlDef) return null;
+  // Wiktionary form-of defs end with "of <a href="...">rootWord</a>"
+  const match = htmlDef.match(/\bof\s+<a[^>]*>([^<]+)<\/a>\s*$/i);
+  if (!match) return null;
+  return {
+    rootWord: match[1].trim(),
+    inflection: stripHtml(htmlDef),
+  };
+}
+
+/**
+ * Fetch the first real (non-form-of) definitions for a root word
+ * from a specific Wiktionary language section.
+ */
+async function fetchRootDefinitions(rootWord, langName) {
+  try {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(rootWord)}`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const sections = data[langName];
+    if (!sections || !Array.isArray(sections)) return [];
+
+    const defs = [];
+    for (const section of sections) {
+      for (const def of section.definitions || []) {
+        const raw = def.definition || '';
+        // Skip nested form-of definitions
+        if (extractFormOf(raw)) continue;
+        const text = stripHtml(raw);
+        if (text) {
+          defs.push(text);
+          if (defs.length >= 2) return defs;
+        }
+      }
+    }
+    return defs;
+  } catch {
+    return [];
+  }
+}
+
 export async function searchWiktionary(query, language = 'en') {
   try {
     const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`, {
@@ -101,7 +150,9 @@ export async function searchWiktionary(query, language = 'en') {
         for (const def of section.definitions || []) {
           if (results.length >= maxTotal || langCount >= maxPerLang) break;
 
-          const definition = stripHtml(def.definition || '');
+          const rawHtml = def.definition || '';
+          const formOf = extractFormOf(rawHtml);
+          const definition = stripHtml(rawHtml);
           if (!definition) continue;
 
           const examples = (def.examples || [])
@@ -121,6 +172,7 @@ export async function searchWiktionary(query, language = 'en') {
             audio_url: null,
             source_type: 'wiktionary',
             contributor_name: 'Wiktionary',
+            _formOf: formOf ? { ...formOf, langName: lang } : null,
           });
           langCount++;
         }
@@ -142,7 +194,9 @@ export async function searchWiktionary(query, language = 'en') {
           for (const def of section.definitions || []) {
             if (results.length >= 5) break;
 
-            const definition = stripHtml(def.definition || '');
+            const rawHtml = def.definition || '';
+            const formOf = extractFormOf(rawHtml);
+            const definition = stripHtml(rawHtml);
             if (!definition) continue;
 
             const examples = (def.examples || [])
@@ -162,10 +216,54 @@ export async function searchWiktionary(query, language = 'en') {
               audio_url: null,
               source_type: 'wiktionary',
               contributor_name: 'Wiktionary',
+              _formOf: formOf ? { ...formOf, langName: lang } : null,
             });
           }
         }
       }
+    }
+
+    // Auto-resolve form-of definitions to actual root word meanings
+    const formOfEntries = results.filter(r => r._formOf);
+    if (formOfEntries.length > 0) {
+      // Collect unique (rootWord, langName) pairs, limit to 3 fetches
+      const toFetch = new Map();
+      for (const entry of formOfEntries) {
+        const key = `${entry._formOf.rootWord}:${entry._formOf.langName}`;
+        if (!toFetch.has(key) && toFetch.size < 3) {
+          toFetch.set(key, entry._formOf);
+        }
+      }
+
+      const fetches = await Promise.allSettled(
+        [...toFetch.entries()].map(async ([key, { rootWord, langName }]) => ({
+          key,
+          defs: await fetchRootDefinitions(rootWord, langName),
+        }))
+      );
+
+      const rootDefMap = new Map();
+      for (const outcome of fetches) {
+        if (outcome.status === 'fulfilled' && outcome.value.defs.length > 0) {
+          rootDefMap.set(outcome.value.key, outcome.value.defs);
+        }
+      }
+
+      for (const entry of results) {
+        if (entry._formOf) {
+          const key = `${entry._formOf.rootWord}:${entry._formOf.langName}`;
+          const rootDefs = rootDefMap.get(key);
+          if (rootDefs) {
+            entry.notes = entry._formOf.inflection;
+            entry.translation = rootDefs[0];
+          }
+        }
+      }
+    }
+
+    // Clean up internal metadata
+    for (const entry of results) {
+      delete entry._formOf;
     }
 
     return results;
