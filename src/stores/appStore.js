@@ -94,6 +94,7 @@ export const useAppStore = create(
         preferences: state.preferences,
         offlineQueue: state.offlineQueue,
         enabledSources: state.enabledSources,
+        activeLanguage: state.activeLanguage,
       }),
     }
   )

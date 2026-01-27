@@ -4,6 +4,8 @@
  * Multilingual, CORS-friendly, no API key needed.
  */
 
+import { LANG_NAME_TO_CODE } from '../languages';
+
 const API_BASE = 'https://en.wiktionary.org/api/rest_v1/page/definition';
 
 // Map ISO codes to Wiktionary language section names
@@ -77,21 +79,27 @@ export async function searchWiktionary(query, language = 'en') {
     const data = await res.json();
 
     // Wiktionary groups definitions by language
-    const targetLang = LANG_MAP[language];
+    const targetLang = language ? LANG_MAP[language] : null;
+    const allLanguages = !targetLang;
+    const maxTotal = allLanguages ? 15 : 5;
+    const maxPerLang = allLanguages ? 3 : 5;
     const results = [];
 
     for (const [lang, definitions] of Object.entries(data)) {
       // If we have a target language, only include matching section
-      // lang key might be the language name directly or nested
       if (targetLang && lang !== targetLang) continue;
+      if (results.length >= maxTotal) break;
+
+      const langCode = allLanguages ? (LANG_NAME_TO_CODE[lang] || language) : language;
+      let langCount = 0;
 
       for (const section of definitions) {
-        if (results.length >= 5) break;
+        if (results.length >= maxTotal || langCount >= maxPerLang) break;
 
         const partOfSpeech = section.partOfSpeech || '';
 
         for (const def of section.definitions || []) {
-          if (results.length >= 5) break;
+          if (results.length >= maxTotal || langCount >= maxPerLang) break;
 
           const definition = stripHtml(def.definition || '');
           if (!definition) continue;
@@ -106,7 +114,7 @@ export async function searchWiktionary(query, language = 'en') {
             word: query,
             phonetic: '',
             translation: definition,
-            language,
+            language: langCode,
             notes: '',
             tags: partOfSpeech ? [partOfSpeech] : [],
             examples,
@@ -114,13 +122,18 @@ export async function searchWiktionary(query, language = 'en') {
             source_type: 'wiktionary',
             contributor_name: 'Wiktionary',
           });
+          langCount++;
         }
       }
     }
 
     // If no results for target language, try without language filter
     if (results.length === 0 && targetLang) {
-      for (const definitions of Object.values(data)) {
+      for (const [lang, definitions] of Object.entries(data)) {
+        if (results.length >= 5) break;
+
+        const langCode = LANG_NAME_TO_CODE[lang] || language;
+
         for (const section of definitions) {
           if (results.length >= 5) break;
 
@@ -142,7 +155,7 @@ export async function searchWiktionary(query, language = 'en') {
               word: query,
               phonetic: '',
               translation: definition,
-              language,
+              language: langCode,
               notes: '',
               tags: partOfSpeech ? [partOfSpeech] : [],
               examples,

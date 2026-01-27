@@ -29,13 +29,15 @@ export function useDictionarySearch() {
     }
 
     const id = ++searchIdRef.current;
-    const language = options.language || 'en';
+    const language = options.language || null;
     const deckId = options.deckId || null;
 
     // Determine which sources to query
     const activeSources = enabledSources.filter(sourceId => {
       const source = SOURCES[sourceId];
       if (!source) return false;
+      // When language is null (all languages), include all sources
+      if (!language) return true;
       if (!source.supportedLanguages) return true;
       return source.supportedLanguages.includes(language);
     });

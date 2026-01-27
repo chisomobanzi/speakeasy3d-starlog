@@ -38,7 +38,7 @@ function stripHtml(html) {
  * Returns all definitions grouped by part of speech.
  */
 export async function fetchFullFreeDictionary(word, language = 'en') {
-  if (language !== 'en') return null;
+  if (language && language !== 'en') return null;
 
   const res = await fetch(`${FREE_DICT_API}/${language}/${encodeURIComponent(word)}`);
   if (!res.ok) return null;

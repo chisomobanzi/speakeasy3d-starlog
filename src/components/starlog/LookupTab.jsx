@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { Search, Filter, X, Loader2 } from 'lucide-react';
+import { Search, Filter, X, Loader2, Globe } from 'lucide-react';
 import EntryCard from './EntryCard';
 import SourceSelector from './SourceSelector';
 import AddToDeckModal from './AddToDeckModal';
@@ -7,7 +7,9 @@ import WordDetailModal from './WordDetailModal';
 import { useDictionarySearch } from '../../hooks/useDictionarySearch';
 import { useEntries } from '../../hooks/useEntries';
 import { useDecks } from '../../hooks/useDecks';
+import { useAppStore } from '../../stores/appStore';
 import { SOURCES } from '../../lib/dictionarySources';
+import { LANGUAGES } from '../../lib/languages';
 import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { EntryCardSkeleton } from '../ui/LoadingSpinner';
@@ -16,6 +18,9 @@ export default function LookupTab() {
   const { decks, fetchDecks } = useDecks();
   const { createEntry } = useEntries();
   const toast = useToast();
+
+  const activeLanguage = useAppStore((s) => s.activeLanguage);
+  const setActiveLanguage = useAppStore((s) => s.setActiveLanguage);
 
   const {
     query,
@@ -53,7 +58,7 @@ export default function LookupTab() {
 
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      search(value);
+      search(value, { language: activeLanguage });
 
       if (value.length >= 2) {
         setRecentSearches(prev => {
@@ -63,7 +68,15 @@ export default function LookupTab() {
         });
       }
     }, 300);
-  }, [search]);
+  }, [search, activeLanguage]);
+
+  const handleLanguageChange = useCallback((langCode) => {
+    const value = langCode || null;
+    setActiveLanguage(value);
+    if (localQuery.length >= 2) {
+      search(localQuery, { language: value });
+    }
+  }, [setActiveLanguage, localQuery, search]);
 
   const handleClear = useCallback(() => {
     setLocalQuery('');
@@ -72,8 +85,8 @@ export default function LookupTab() {
 
   const handleRecentClick = useCallback((term) => {
     setLocalQuery(term);
-    search(term);
-  }, [search]);
+    search(term, { language: activeLanguage });
+  }, [search, activeLanguage]);
 
   const handleSelectResult = useCallback((entry) => {
     setDetailEntry(entry);
@@ -143,6 +156,21 @@ export default function LookupTab() {
     <div className="space-y-6">
       {/* Source selector chips */}
       <SourceSelector loading={loading} />
+
+      {/* Language filter */}
+      <div className="flex items-center gap-2">
+        <Globe className="w-4 h-4 text-slate-400 shrink-0" />
+        <select
+          value={activeLanguage || ''}
+          onChange={(e) => handleLanguageChange(e.target.value)}
+          className="bg-slate-900/50 border border-slate-700 rounded-lg text-sm text-slate-300 px-2 py-1.5 focus:outline-none focus:border-starlog-500 focus:ring-1 focus:ring-starlog-500 transition-colors cursor-pointer"
+        >
+          <option value="">All Languages</option>
+          {LANGUAGES.map(({ code, name }) => (
+            <option key={code} value={code}>{name}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Search input */}
       <div className="space-y-3">

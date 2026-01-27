@@ -8,7 +8,7 @@ const API_BASE = 'https://api.dictionaryapi.dev/api/v2/entries';
 
 export async function searchFreeDictionary(query, language = 'en') {
   // Only supports English
-  if (language !== 'en') return [];
+  if (language && language !== 'en') return [];
 
   try {
     const res = await fetch(`${API_BASE}/${language}/${encodeURIComponent(query)}`);
