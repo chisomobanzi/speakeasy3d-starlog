@@ -108,7 +108,11 @@ export default function Header() {
                       <button
                         onClick={async () => {
                           setShowUserMenu(false);
-                          await signOut();
+                          try {
+                            await signOut();
+                          } catch {
+                            // AbortError expected — auth state change aborts the fetch
+                          }
                           navigate('/login', { replace: true });
                         }}
                         className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
