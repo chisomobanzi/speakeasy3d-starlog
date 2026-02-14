@@ -78,8 +78,15 @@ export default function ResetPasswordPage() {
         success('Password updated successfully');
       }
     } catch (err) {
-      console.error('Password update error:', err);
-      showError('Failed to update password. The reset link may have expired — please request a new one.');
+      // AbortError means the auth state changed mid-request — the update succeeded
+      // but the re-render from onAuthStateChange aborted the fetch
+      if (err.name === 'AbortError') {
+        setDone(true);
+        success('Password updated successfully');
+      } else {
+        console.error('Password update error:', err);
+        showError('Failed to update password. The reset link may have expired — please request a new one.');
+      }
     } finally {
       setLoading(false);
     }
