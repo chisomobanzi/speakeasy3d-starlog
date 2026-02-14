@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Settings, LogOut, User } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ import Button from '../ui/Button';
 export default function Header() {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -105,7 +106,11 @@ export default function Header() {
                         Profile & Settings
                       </MenuLink>
                       <button
-                        onClick={signOut}
+                        onClick={async () => {
+                          setShowUserMenu(false);
+                          await signOut();
+                          navigate('/login', { replace: true });
+                        }}
                         className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
