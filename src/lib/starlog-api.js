@@ -6,16 +6,21 @@
  *
  * Usage:
  *   import { createClient } from '@supabase/supabase-js';
- *   import { quickAddEntry, getSyncBundle, batchUpsertSrs } from './starlog-api';
+ *   import { quickAddEntry, getSyncBundle, batchUpsertSrs, lookupWord } from './starlog-api';
  *
  *   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  *   await supabase.auth.signInWithPassword({ email, password });
  *
  *   const entry = await quickAddEntry(supabase, { deckId, word: 'hello', translation: 'hola', language: 'es' });
+ *   const results = await lookupWord(supabase, 'saudade', { language: 'pt' });
  *
  * For Unity/C# (Constellations): call the same RPC function names directly
  * via the Supabase C# client — this file serves as API documentation.
  */
+
+import { searchFreeDictionary } from './adapters/freeDictionary';
+import { searchWiktionary } from './adapters/wiktionary';
+export { fetchFullEntry } from './adapters/fetchFullEntry';
 
 /**
  * Atomically add an entry to a deck and increment its word count.
@@ -90,4 +95,84 @@ export async function batchUpsertSrs(supabase, updates) {
   });
   if (error) throw error;
   return data;
+}
+
+/**
+ * Search personal + community dictionary entries via the search_dictionary RPC.
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {Object} params
+ * @param {string} params.query - Search term (min 2 chars)
+ * @param {string} [params.language] - ISO language code filter
+ * @param {string} [params.deckId] - Limit personal results to a specific deck
+ * @param {string[]} [params.sources] - Subset of ['personal','community'] (default both)
+ * @param {number} [params.limit] - Max results per source (default 25)
+ * @returns {Promise<{ personal: Object[], community: Object[] }>}
+ */
+export async function searchDictionary(supabase, { query, language, deckId, sources, limit }) {
+  const { data, error } = await supabase.rpc('search_dictionary', {
+    p_query: query,
+    p_language: language ?? null,
+    p_deck_id: deckId ?? null,
+    p_sources: sources ?? ['personal', 'community'],
+    p_limit: limit ?? 25,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Unified fan-out dictionary lookup across all 4 sources:
+ * personal entries, community entries, Free Dictionary API, and Wiktionary API.
+ *
+ * Calls the Supabase RPC for personal/community and the external adapters
+ * in parallel. External adapter failures are silently caught (fault isolation).
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} query - The word or phrase to look up
+ * @param {Object} [options]
+ * @param {string} [options.language] - ISO language code
+ * @param {string[]} [options.sources] - Subset of ['personal','community','freeDictionary','wiktionary']
+ * @param {string} [options.deckId] - Limit personal results to a specific deck
+ * @param {number} [options.limit] - Max results per DB source (default 25)
+ * @returns {Promise<{ personal: Object[], community: Object[], freeDictionary: Object[], wiktionary: Object[] }>}
+ */
+export async function lookupWord(supabase, query, { language, sources, deckId, limit } = {}) {
+  const allSources = sources ?? ['personal', 'community', 'freeDictionary', 'wiktionary'];
+  const dbSources = allSources.filter(s => s === 'personal' || s === 'community');
+  const wantFreeDict = allSources.includes('freeDictionary');
+  const wantWiktionary = allSources.includes('wiktionary');
+
+  const promises = [];
+
+  // DB search (personal + community via single RPC)
+  if (dbSources.length > 0) {
+    promises.push(
+      searchDictionary(supabase, { query, language, deckId, sources: dbSources, limit })
+        .catch(() => ({ personal: [], community: [] }))
+    );
+  } else {
+    promises.push(Promise.resolve({ personal: [], community: [] }));
+  }
+
+  // External adapters
+  promises.push(
+    wantFreeDict
+      ? searchFreeDictionary(query, language).catch(() => [])
+      : Promise.resolve([])
+  );
+  promises.push(
+    wantWiktionary
+      ? searchWiktionary(query, language).catch(() => [])
+      : Promise.resolve([])
+  );
+
+  const [dbResults, freeDictResults, wiktionaryResults] = await Promise.all(promises);
+
+  return {
+    personal: dbResults.personal ?? [],
+    community: dbResults.community ?? [],
+    freeDictionary: freeDictResults,
+    wiktionary: wiktionaryResults,
+  };
 }
