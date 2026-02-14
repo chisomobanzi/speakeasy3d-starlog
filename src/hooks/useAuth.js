@@ -123,8 +123,15 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    // Clear state immediately so UI updates right away
+    setUser(null);
+    setProfile(null);
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // AbortError expected — state change re-renders and aborts the fetch
+    }
+    return { error: null };
   };
 
   const resetPassword = async (email) => {
