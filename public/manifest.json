@@ -34,6 +34,11 @@
       "form_factor": "narrow"
     }
   ],
+  "share_target": {
+    "action": "/add",
+    "method": "GET",
+    "params": { "text": "word" }
+  },
   "shortcuts": [
     {
       "name": "Add Word",

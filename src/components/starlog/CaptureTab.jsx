@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Mic, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Input, { Textarea } from '../ui/Input';
@@ -16,6 +17,7 @@ export default function CaptureTab() {
   const { createEntry } = useEntries();
   const { decks, fetchDecks } = useDecks();
   const { success, error } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
     word: '',
@@ -33,6 +35,30 @@ export default function CaptureTab() {
   const [showDeckModal, setShowDeckModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Pre-fill from URL query params (share target, deep links from Missions/Constellations)
+  useEffect(() => {
+    const word = searchParams.get('word');
+    if (!word) return;
+
+    const translation = searchParams.get('translation') || '';
+    const source = searchParams.get('source') || '';
+    const deck = searchParams.get('deck');
+
+    setFormData(prev => ({
+      ...prev,
+      word,
+      translation,
+      ...(source && { sourceType: source }),
+    }));
+
+    if (deck) {
+      setSelectedDeckId(deck);
+    }
+
+    // Clear params from URL so refreshing doesn't re-fill
+    setSearchParams({}, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedDeck = decks.find(d => d.id === selectedDeckId);
 

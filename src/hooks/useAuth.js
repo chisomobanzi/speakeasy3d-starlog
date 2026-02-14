@@ -1,8 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '../lib/supabase';
-
-// DEV MODE: Set to true to use mock user data
-const DEV_MODE = true;
+import { DEV_MODE } from '../lib/config';
 
 const MOCK_USER = {
   id: 'dev-user-123',

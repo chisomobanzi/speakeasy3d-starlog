@@ -2,9 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { DEMO_AMIS_DECK } from '../data/demoPersonalDeck';
-
-// DEV MODE: Set to true to use mock data
-const DEV_MODE = true;
+import { DEV_MODE } from '../lib/config';
 
 // Mock decks for development
 const MOCK_DECKS = [

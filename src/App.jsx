@@ -2,9 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ToastProvider } from './components/ui/Toast';
 import { LoadingScreen } from './components/ui/LoadingSpinner';
-
-// DEV MODE: Set to true to bypass authentication
-const DEV_MODE = true;
+import { DEV_MODE } from './lib/config';
 
 // Layouts
 import AppShell from './components/layout/AppShell';
