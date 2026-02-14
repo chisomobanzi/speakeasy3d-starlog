@@ -12,6 +12,7 @@ import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import AuthCallback from './pages/auth/AuthCallback';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 // App pages
 import DecksPage from './pages/DecksPage';
@@ -77,6 +78,7 @@ function AppRoutes() {
         </PublicRoute>
       } />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
       {/* App routes with AppShell layout */}
       <Route path="/" element={<AppShell />}>

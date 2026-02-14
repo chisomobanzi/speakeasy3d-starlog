@@ -66,7 +66,23 @@ export function AuthProvider({ children }) {
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error && error.code === 'PGRST116') {
+        // No profile exists — create one (e.g. user signed up on marketing site)
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            display_name: authUser?.user_metadata?.display_name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0],
+            avatar_url: authUser?.user_metadata?.avatar_url || null,
+          })
+          .select()
+          .single();
+        setProfile(newProfile);
+        return;
+      }
+
+      if (error) {
         console.error('Error fetching profile:', error);
       }
 
