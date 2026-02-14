@@ -7,6 +7,27 @@
 import { LANG_NAME_TO_CODE } from '../languages';
 
 const API_BASE = 'https://en.wiktionary.org/api/rest_v1/page/definition';
+const OPENSEARCH_BASE = 'https://en.wiktionary.org/w/api.php';
+
+/**
+ * Use Wiktionary's opensearch API to find accent-correct spelling.
+ * Returns the top suggestion or null.
+ */
+async function suggestWord(query) {
+  try {
+    const url = `${OPENSEARCH_BASE}?action=opensearch&search=${encodeURIComponent(query)}&limit=5&format=json&origin=*`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    // opensearch returns [query, [suggestions], ...]
+    const suggestions = data[1];
+    if (!suggestions || suggestions.length === 0) return null;
+    // Return the first suggestion that differs from the original query
+    return suggestions.find(s => s.toLowerCase() !== query.toLowerCase()) || suggestions[0];
+  } catch {
+    return null;
+  }
+}
 
 // Map ISO codes to Wiktionary language section names
 const LANG_MAP = {
@@ -126,9 +147,22 @@ async function fetchRootDefinitions(rootWord, langName) {
 
 export async function searchWiktionary(query, language = 'en') {
   try {
-    const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`, {
+    let displayWord = query;
+    let res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`, {
       headers: { 'Accept': 'application/json' },
     });
+
+    // Fallback: use opensearch to find accent-correct spelling
+    if (res.status === 404) {
+      const suggested = await suggestWord(query);
+      if (suggested) {
+        res = await fetch(`${API_BASE}/${encodeURIComponent(suggested)}`, {
+          headers: { 'Accept': 'application/json' },
+        });
+        if (res.ok) displayWord = suggested;
+      }
+    }
+
     if (!res.ok) return [];
 
     const data = await res.json();
@@ -168,7 +202,7 @@ export async function searchWiktionary(query, language = 'en') {
 
           results.push({
             id: `wiktionary:${query}:${results.length}`,
-            word: query,
+            word: displayWord,
             phonetic: '',
             translation: definition,
             language: langCode,
@@ -212,7 +246,7 @@ export async function searchWiktionary(query, language = 'en') {
 
             results.push({
               id: `wiktionary:${query}:${results.length}`,
-              word: query,
+              word: displayWord,
               phonetic: '',
               translation: definition,
               language: langCode,

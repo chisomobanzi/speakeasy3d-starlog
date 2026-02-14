@@ -21,8 +21,8 @@ export async function searchSource(sourceId, query, language, options = {}) {
 
   try {
     return await adapter(query, language, options);
-  } catch {
-    console.error(`Adapter error for ${sourceId}:`, sourceId);
+  } catch (error) {
+    console.error(`Adapter error for ${sourceId}:`, error);
     return [];
   }
 }
