@@ -18,22 +18,40 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Supabase auto-detects the recovery token from the URL hash
-    // and establishes a session via onAuthStateChange
+    let mounted = true;
+
+    // Listen for the PASSWORD_RECOVERY event (fires when Supabase processes the token)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event) => {
-        if (event === 'PASSWORD_RECOVERY') {
+        if (mounted && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) {
           setSessionReady(true);
         }
       }
     );
 
-    // Also check if we already have a session (token already processed)
+    // The token may already have been processed before this component mounted.
+    // Check if there's an existing session — if we're on this page, it's from the reset link.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
+      if (mounted && session) setSessionReady(true);
     });
 
-    return () => subscription.unsubscribe();
+    // Fallback: if the hash contains recovery tokens, give Supabase a moment to process them
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      // Token is in the URL — Supabase will process it shortly
+      setTimeout(() => {
+        if (mounted && !sessionReady) {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (mounted && session) setSessionReady(true);
+          });
+        }
+      }, 2000);
+    }
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e) => {
