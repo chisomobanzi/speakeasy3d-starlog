@@ -123,19 +123,16 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    // Clear React state first so UI updates immediately
-    setUser(null);
-    setProfile(null);
-    // Clear Supabase session from localStorage directly to guarantee
-    // it doesn't persist across refreshes
+    // Clear Supabase session from localStorage
     Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+      if (key.startsWith('sb-')) {
         localStorage.removeItem(key);
       }
     });
-    // Fire-and-forget the server-side revocation
-    supabase.auth.signOut().catch(() => {});
-    return { error: null };
+    // Hard reload to /login — this reinitializes the Supabase client
+    // from the now-empty localStorage, avoiding issues with the
+    // in-memory session state writing back to storage
+    window.location.href = '/login';
   };
 
   const resetPassword = async (email) => {
