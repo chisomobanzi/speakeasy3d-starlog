@@ -123,14 +123,19 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    // Use scope: 'local' to clear the session from localStorage
-    // without making a server request (which would throw AbortError
-    // when the auth state change re-renders and aborts the fetch).
-    // The server-side JWT will expire on its own.
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    // Clear React state first so UI updates immediately
     setUser(null);
     setProfile(null);
-    return { error };
+    // Clear Supabase session from localStorage directly to guarantee
+    // it doesn't persist across refreshes
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        localStorage.removeItem(key);
+      }
+    });
+    // Fire-and-forget the server-side revocation
+    supabase.auth.signOut().catch(() => {});
+    return { error: null };
   };
 
   const resetPassword = async (email) => {
