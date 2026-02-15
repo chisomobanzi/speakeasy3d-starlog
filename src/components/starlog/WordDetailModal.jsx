@@ -6,12 +6,14 @@ import Badge from '../ui/Badge';
 import { Skeleton } from '../ui/LoadingSpinner';
 import { fetchFullEntry } from '../../lib/adapters/fetchFullEntry';
 import { SOURCES } from '../../lib/dictionarySources';
+import { translateExamples } from '../../lib/translate';
 
 export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }) {
   const [fullData, setFullData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [translations, setTranslations] = useState(new Map());
   const audioRef = useRef(null);
 
   const sourceId = entry?._sourceId || entry?.source_type;
@@ -50,6 +52,50 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
 
     return () => { cancelled = true; };
   }, [isOpen, entry, isExternal, sourceId]);
+
+  // Translate example sentences when data loads (non-English only)
+  useEffect(() => {
+    if (!isOpen || !entry) {
+      setTranslations(new Map());
+      return;
+    }
+
+    const lang = entry.language || 'en';
+    if (lang === 'en') return;
+
+    // Collect all example strings from fullData or entry
+    const examples = [];
+    if (fullData?.meanings) {
+      for (const m of fullData.meanings) {
+        for (const d of m.definitions) {
+          if (d.example) {
+            // Split on " | " in case multiple examples are joined
+            for (const ex of d.example.split(' | ')) {
+              examples.push(ex.trim());
+            }
+          }
+        }
+      }
+    }
+    if (entry.examples) {
+      for (const ex of entry.examples) {
+        for (const part of ex.split(' | ')) {
+          if (!examples.includes(part.trim())) {
+            examples.push(part.trim());
+          }
+        }
+      }
+    }
+
+    if (examples.length === 0) return;
+
+    let cancelled = false;
+    translateExamples(examples, lang).then(map => {
+      if (!cancelled) setTranslations(map);
+    });
+
+    return () => { cancelled = true; };
+  }, [isOpen, entry, fullData]);
 
   if (!entry) return null;
 
@@ -103,6 +149,17 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
     }
 
     onSaveToDeck(enriched);
+  };
+
+  const handleSaveExample = (exampleText, translationText) => {
+    if (!onSaveToDeck) return;
+    onSaveToDeck({
+      word: exampleText,
+      translation: translationText || '',
+      language: entry.language,
+      source_type: entry._sourceId || entry.source_type,
+      contributor_name: entry.contributor_name,
+    });
   };
 
   const audioUrl = fullData?.audio_url || entry.audio_url;
@@ -188,11 +245,33 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
               {meaning.definitions.map((def, dIdx) => (
                 <li key={dIdx} className="text-slate-300 text-sm">
                   <span>{def.definition}</span>
-                  {def.example && (
-                    <p className="mt-1 ml-5 text-slate-500 italic text-xs">
-                      &ldquo;{def.example}&rdquo;
-                    </p>
-                  )}
+                  {def.example && def.example.split(' | ').map((ex, exIdx) => {
+                    const trimmed = ex.trim();
+                    const trans = translations.get(trimmed);
+                    return (
+                      <div key={exIdx} className="mt-1 ml-5 flex items-start gap-1.5 group">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-slate-500 italic text-xs">
+                            &ldquo;{trimmed}&rdquo;
+                          </p>
+                          {trans && (
+                            <p className="text-slate-600 text-xs mt-0.5">
+                              {trans}
+                            </p>
+                          )}
+                        </div>
+                        {onSaveToDeck && (
+                          <button
+                            onClick={() => handleSaveExample(trimmed, trans)}
+                            className="flex-shrink-0 mt-0.5 p-0.5 rounded text-slate-600 hover:text-starlog-400 hover:bg-starlog-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Save example to deck"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                   {def.synonyms?.length > 0 && (
                     <p className="mt-1 ml-5 text-xs text-slate-500">
                       <span className="text-slate-400">Synonyms:</span>{' '}
@@ -228,9 +307,31 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
       )}
       {entry.examples?.length > 0 && (
         <div className="space-y-1">
-          {entry.examples.map((ex, i) => (
-            <p key={i} className="text-sm text-slate-500 italic">&ldquo;{ex}&rdquo;</p>
-          ))}
+          {entry.examples.flatMap((ex, i) =>
+            ex.split(' | ').map((part, j) => {
+              const trimmed = part.trim();
+              const trans = translations.get(trimmed);
+              return (
+                <div key={`${i}-${j}`} className="flex items-start gap-1.5 group">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-500 italic">&ldquo;{trimmed}&rdquo;</p>
+                    {trans && (
+                      <p className="text-slate-600 text-xs mt-0.5">{trans}</p>
+                    )}
+                  </div>
+                  {onSaveToDeck && (
+                    <button
+                      onClick={() => handleSaveExample(trimmed, trans)}
+                      className="flex-shrink-0 mt-0.5 p-0.5 rounded text-slate-600 hover:text-starlog-400 hover:bg-starlog-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Save example to deck"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       )}
       {entry.notes && (
@@ -260,9 +361,31 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
         <div>
           <span className="text-xs text-slate-500 uppercase tracking-wide">Examples</span>
           <div className="mt-1 space-y-1">
-            {entry.examples.map((ex, i) => (
-              <p key={i} className="text-sm text-slate-400 italic">&ldquo;{ex}&rdquo;</p>
-            ))}
+            {entry.examples.flatMap((ex, i) =>
+              ex.split(' | ').map((part, j) => {
+                const trimmed = part.trim();
+                const trans = translations.get(trimmed);
+                return (
+                  <div key={`${i}-${j}`} className="flex items-start gap-1.5 group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-400 italic">&ldquo;{trimmed}&rdquo;</p>
+                      {trans && (
+                        <p className="text-slate-600 text-xs mt-0.5">{trans}</p>
+                      )}
+                    </div>
+                    {onSaveToDeck && (
+                      <button
+                        onClick={() => handleSaveExample(trimmed, trans)}
+                        className="flex-shrink-0 mt-0.5 p-0.5 rounded text-slate-600 hover:text-starlog-400 hover:bg-starlog-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Save example to deck"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
