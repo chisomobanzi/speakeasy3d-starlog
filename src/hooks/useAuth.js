@@ -37,19 +37,16 @@ export function AuthProvider({ children }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes — keep this synchronous to avoid
+    // deadlocking the Supabase auth lock (Navigator Locks API).
+    // Profile fetching is handled by the separate useEffect below.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
+        if (!session?.user) {
           setProfile(null);
         }
       }
@@ -57,6 +54,13 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch profile whenever user changes — kept separate from
+  // onAuthStateChange to avoid Supabase auth lock deadlock.
+  useEffect(() => {
+    if (DEV_MODE || !user) return;
+    fetchProfile(user.id);
+  }, [user?.id]);
 
   const fetchProfile = async (userId) => {
     try {

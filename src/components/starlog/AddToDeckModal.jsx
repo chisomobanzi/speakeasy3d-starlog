@@ -17,10 +17,12 @@ export default function AddToDeckModal({
   const [newDeckName, setNewDeckName] = useState('');
   const [newDeckLanguage, setNewDeckLanguage] = useState('');
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchDecks();
+      setCreateError(null);
     }
   }, [isOpen, fetchDecks]);
 
@@ -28,6 +30,7 @@ export default function AddToDeckModal({
     if (!newDeckName.trim() || !newDeckLanguage.trim()) return;
 
     setCreating(true);
+    setCreateError(null);
     const { data, error } = await createDeck({
       name: newDeckName.trim(),
       target_language: newDeckLanguage.trim().toLowerCase(),
@@ -35,7 +38,12 @@ export default function AddToDeckModal({
 
     setCreating(false);
 
-    if (!error && data) {
+    if (error) {
+      setCreateError(error.message || 'Failed to create deck');
+      return;
+    }
+
+    if (data) {
       onSelect(data.id);
       onClose();
       setShowCreate(false);
@@ -134,6 +142,10 @@ export default function AddToDeckModal({
             hint="Use language codes like 'pt' for Portuguese, 'sn' for Shona"
           />
 
+          {createError && (
+            <p className="text-sm text-red-400">{createError}</p>
+          )}
+
           <div className="flex gap-3 pt-2">
             <Button
               variant="ghost"
@@ -141,6 +153,7 @@ export default function AddToDeckModal({
                 setShowCreate(false);
                 setNewDeckName('');
                 setNewDeckLanguage('');
+                setCreateError(null);
               }}
               className="flex-1"
             >
