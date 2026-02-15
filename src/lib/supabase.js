@@ -17,6 +17,9 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
+      // Bypass Navigator Locks API to prevent deadlocks that abort
+      // in-flight requests during token refresh.
+      lock: async (name, acquireTimeout, fn) => await fn(),
     },
   }
 );
