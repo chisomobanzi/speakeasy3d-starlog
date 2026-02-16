@@ -85,6 +85,14 @@ CREATE TABLE IF NOT EXISTS entries (
 
   community_entry_id UUID,
 
+  -- FSRS-6 scheduling fields (synced with Constellations)
+  fsrs_stability     REAL DEFAULT 0,
+  fsrs_difficulty     REAL DEFAULT 0,
+  fsrs_state          TEXT DEFAULT 'new',
+  fsrs_reps           INTEGER DEFAULT 0,
+  fsrs_lapses         INTEGER DEFAULT 0,
+  fsrs_learning_step  INTEGER DEFAULT 0,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -488,6 +496,12 @@ BEGIN
       review_count = COALESCE((v_item->>'review_count')::INTEGER, review_count),
       next_review_at = COALESCE((v_item->>'next_review_at')::TIMESTAMPTZ, next_review_at),
       last_reviewed_at = COALESCE((v_item->>'last_reviewed_at')::TIMESTAMPTZ, last_reviewed_at),
+      fsrs_stability = COALESCE((v_item->>'fsrs_stability')::REAL, fsrs_stability),
+      fsrs_difficulty = COALESCE((v_item->>'fsrs_difficulty')::REAL, fsrs_difficulty),
+      fsrs_state = COALESCE(v_item->>'fsrs_state', fsrs_state),
+      fsrs_reps = COALESCE((v_item->>'fsrs_reps')::INTEGER, fsrs_reps),
+      fsrs_lapses = COALESCE((v_item->>'fsrs_lapses')::INTEGER, fsrs_lapses),
+      fsrs_learning_step = COALESCE((v_item->>'fsrs_learning_step')::INTEGER, fsrs_learning_step),
       updated_at = NOW()
     WHERE id = v_entry_id
       AND user_id = v_user_id
@@ -629,6 +643,83 @@ INSERT INTO language_communities (code, name, native_name) VALUES
   ('yo', 'Yoruba', 'Yorùbá'),
   ('ami', 'Amis', 'Pangcah')
 ON CONFLICT (code) DO NOTHING;
+
+-- ============================================
+-- PAIRING CODES (VR device authentication)
+-- ============================================
+CREATE TABLE IF NOT EXISTS pairing_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  claimed_at TIMESTAMPTZ,
+  claimed_by_ip TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Fast lookup of active (unclaimed) codes
+CREATE INDEX IF NOT EXISTS idx_pairing_codes_active
+  ON pairing_codes (code) WHERE claimed_at IS NULL;
+
+-- Lookup by user for invalidation
+CREATE INDEX IF NOT EXISTS idx_pairing_codes_user
+  ON pairing_codes (user_id) WHERE claimed_at IS NULL;
+
+ALTER TABLE pairing_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own pairing codes" ON pairing_codes
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Generate a 6-digit VR pairing code. Invalidates prior unclaimed codes.
+CREATE OR REPLACE FUNCTION generate_pairing_code()
+RETURNS JSONB AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_code TEXT;
+  v_expires_at TIMESTAMPTZ;
+  v_attempts INTEGER := 0;
+  v_collision BOOLEAN;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  UPDATE pairing_codes
+  SET claimed_at = NOW()
+  WHERE user_id = v_user_id
+    AND claimed_at IS NULL;
+
+  DELETE FROM pairing_codes
+  WHERE expires_at < NOW() - INTERVAL '1 hour';
+
+  v_expires_at := NOW() + INTERVAL '5 minutes';
+  LOOP
+    v_attempts := v_attempts + 1;
+    IF v_attempts > 20 THEN
+      RAISE EXCEPTION 'Could not generate unique pairing code';
+    END IF;
+
+    v_code := lpad((floor(random() * 1000000))::INTEGER::TEXT, 6, '0');
+
+    SELECT EXISTS (
+      SELECT 1 FROM pairing_codes
+      WHERE code = v_code
+        AND claimed_at IS NULL
+        AND expires_at > NOW()
+    ) INTO v_collision;
+
+    EXIT WHEN NOT v_collision;
+  END LOOP;
+
+  INSERT INTO pairing_codes (user_id, code, expires_at)
+  VALUES (v_user_id, v_code, v_expires_at);
+
+  RETURN jsonb_build_object(
+    'code', v_code,
+    'expires_at', v_expires_at
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Done!
 SELECT 'Schema created successfully!' AS status;
