@@ -22,6 +22,7 @@ import ImportPage from './pages/ImportPage';
 import DeckDetailPage from './pages/DeckDetailPage';
 import CommunityPage from './pages/CommunityPage';
 import SettingsPage from './pages/settings/SettingsPage';
+import ConstellationPage from './pages/ConstellationPage';
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
@@ -79,6 +80,10 @@ function AppRoutes() {
       } />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Public constellation (fullscreen, no AppShell) */}
+      <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
+      <Route path="/constellation" element={<ConstellationPage />} />
 
       {/* App routes with AppShell layout */}
       <Route path="/" element={<AppShell />}>

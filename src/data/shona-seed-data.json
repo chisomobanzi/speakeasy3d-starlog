@@ -1,0 +1,2569 @@
+{
+  "language": {
+    "code": "sn",
+    "name": "chiShona",
+    "family": "S.10 Bantu"
+  },
+  "sil_domains": [
+    {
+      "id": "1",
+      "name": "Universe & Creation",
+      "short": "Universe",
+      "expected": 320,
+      "angle": 0,
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "2",
+      "name": "Person",
+      "short": "Person",
+      "expected": 280,
+      "angle": 40,
+      "color": "#FF6B8A"
+    },
+    {
+      "id": "3",
+      "name": "Language & Thought",
+      "short": "Mind",
+      "expected": 250,
+      "angle": 80,
+      "color": "#CE93D8"
+    },
+    {
+      "id": "4",
+      "name": "Social Behavior",
+      "short": "Social",
+      "expected": 380,
+      "angle": 120,
+      "color": "#FFB347"
+    },
+    {
+      "id": "5",
+      "name": "Daily Life",
+      "short": "Daily Life",
+      "expected": 300,
+      "angle": 160,
+      "color": "#7ED87E"
+    },
+    {
+      "id": "6",
+      "name": "Work & Occupation",
+      "short": "Work",
+      "expected": 340,
+      "angle": 200,
+      "color": "#A5D6A7"
+    },
+    {
+      "id": "7",
+      "name": "Physical Actions",
+      "short": "Actions",
+      "expected": 220,
+      "angle": 240,
+      "color": "#82B1FF"
+    },
+    {
+      "id": "8",
+      "name": "States",
+      "short": "States",
+      "expected": 200,
+      "angle": 280,
+      "color": "#FFAB91"
+    },
+    {
+      "id": "9",
+      "name": "Grammar",
+      "short": "Grammar",
+      "expected": 150,
+      "angle": 320,
+      "color": "#B0BEC5"
+    }
+  ],
+  "source_meta": {
+    "elder": {
+      "label": "Elder-verified",
+      "color": "#FFD700",
+      "brightness": 1.0,
+      "symbol": "◆"
+    },
+    "dictionary": {
+      "label": "Published dictionary",
+      "color": "#7BA3E0",
+      "brightness": 0.7,
+      "symbol": "●"
+    },
+    "community": {
+      "label": "Community-contributed",
+      "color": "#00D4FF",
+      "brightness": 0.85,
+      "symbol": "◇"
+    },
+    "academic": {
+      "label": "Academic/linguistic",
+      "color": "#90CAF9",
+      "brightness": 0.65,
+      "symbol": "■"
+    },
+    "ai": {
+      "label": "AI-suggested",
+      "color": "#9B7FD4",
+      "brightness": 0.35,
+      "symbol": "○"
+    }
+  },
+  "words": [
+    {
+      "shona": "denga",
+      "english": "sky, heaven",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "zuva",
+      "english": "sun, day",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mwedzi",
+      "english": "moon, month",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nyeredzi",
+      "english": "star",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "gore",
+      "english": "cloud, year",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mvura",
+      "english": "rain, water",
+      "primary_domain": "1",
+      "sub_domain": "1.3",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "dutu",
+      "english": "storm",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "dhutu",
+      "english": "whirlwind",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "chando",
+      "english": "cold weather, winter",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "zhizha",
+      "english": "summer, hot season",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mhepo",
+      "english": "wind, spirit",
+      "primary_domain": "1",
+      "sub_domain": "1.1",
+      "secondary_domains": [
+        "3",
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "nyika",
+      "english": "country, land, world",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "ivhu",
+      "english": "soil, earth, ground",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "dombo",
+      "english": "rock, stone",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "gomo",
+      "english": "mountain, hill",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "bako",
+      "english": "cave",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "mhene",
+      "english": "cliff",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [],
+      "source": "ai"
+    },
+    {
+      "shona": "rwizi",
+      "english": "river",
+      "primary_domain": "1",
+      "sub_domain": "1.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "dziva",
+      "english": "pool, lake",
+      "primary_domain": "1",
+      "sub_domain": "1.3",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "tsime",
+      "english": "well (water)",
+      "primary_domain": "1",
+      "sub_domain": "1.3",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "gungwa",
+      "english": "sea, ocean",
+      "primary_domain": "1",
+      "sub_domain": "1.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "jecha",
+      "english": "sand",
+      "primary_domain": "1",
+      "sub_domain": "1.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "muti",
+      "english": "tree, medicine",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "2"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "ruva",
+      "english": "flower",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "shizha",
+      "english": "leaf",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mudzi",
+      "english": "root, origin",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "dovi",
+      "english": "peanut",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "chibage",
+      "english": "maize",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "5",
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "muzhanje",
+      "english": "wild loquat fruit",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "nhunguru",
+      "english": "red milkwood berry",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mutamba",
+      "english": "snot apple tree",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "2"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mupfura",
+      "english": "marula tree",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "uswa",
+      "english": "grass",
+      "primary_domain": "1",
+      "sub_domain": "1.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "shumba",
+      "english": "lion",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "nzou",
+      "english": "elephant",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "nyoka",
+      "english": "snake",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "shiri",
+      "english": "bird",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "hove",
+      "english": "fish",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "5",
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "imbwa",
+      "english": "dog",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "katsi",
+      "english": "cat",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mombe",
+      "english": "cattle, cow",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "6",
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mbudzi",
+      "english": "goat",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "huku",
+      "english": "chicken",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "5",
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nguruve",
+      "english": "pig",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nhuka",
+      "english": "wild animal",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "chipembere",
+      "english": "rhinoceros",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "twiza",
+      "english": "giraffe",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mvuu",
+      "english": "hippopotamus",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "tsuro",
+      "english": "hare, rabbit",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "gudo",
+      "english": "baboon",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "njiva",
+      "english": "dove",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "hungwe",
+      "english": "fish eagle",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "svosve",
+      "english": "ant",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "nyuchi",
+      "english": "bee",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "gonzo",
+      "english": "rat, mouse",
+      "primary_domain": "1",
+      "sub_domain": "1.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "musoro",
+      "english": "head",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "meso",
+      "english": "eyes",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nzeve",
+      "english": "ear",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "muromo",
+      "english": "mouth, lips",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "izwi",
+      "english": "voice, word",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "ruoko",
+      "english": "hand, arm",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "tsoka",
+      "english": "foot, leg",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "moyo",
+      "english": "heart",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "dumbu",
+      "english": "stomach, belly",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "musana",
+      "english": "back",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "bvudzi",
+      "english": "hair",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "zino",
+      "english": "tooth",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "rurimi",
+      "english": "tongue, language",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "gumbo",
+      "english": "leg",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "pfupa",
+      "english": "bone",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "ropa",
+      "english": "blood",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "nyama",
+      "english": "meat, flesh",
+      "primary_domain": "2",
+      "sub_domain": "2.1",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kurwara",
+      "english": "to be sick",
+      "primary_domain": "2",
+      "sub_domain": "2.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mushonga",
+      "english": "medicine",
+      "primary_domain": "2",
+      "sub_domain": "2.5",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "chiremba",
+      "english": "doctor, healer",
+      "primary_domain": "2",
+      "sub_domain": "2.5",
+      "secondary_domains": [
+        "6",
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "n'anga",
+      "english": "traditional healer",
+      "primary_domain": "2",
+      "sub_domain": "2.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "chirwere",
+      "english": "disease",
+      "primary_domain": "2",
+      "sub_domain": "2.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kuporeswa",
+      "english": "to be healed",
+      "primary_domain": "2",
+      "sub_domain": "2.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "kuzvarwa",
+      "english": "to be born",
+      "primary_domain": "2",
+      "sub_domain": "2.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kufa",
+      "english": "to die, death",
+      "primary_domain": "2",
+      "sub_domain": "2.6",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "upenyu",
+      "english": "life",
+      "primary_domain": "2",
+      "sub_domain": "2.6",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kuchembera",
+      "english": "to grow old",
+      "primary_domain": "2",
+      "sub_domain": "2.6",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "kukura",
+      "english": "to grow up",
+      "primary_domain": "2",
+      "sub_domain": "2.6",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "pamuviri",
+      "english": "pregnant",
+      "primary_domain": "2",
+      "sub_domain": "2.6",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "kufunga",
+      "english": "to think",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kuziva",
+      "english": "to know",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kuyeuka",
+      "english": "to remember",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "kukanganwa",
+      "english": "to forget",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "pfungwa",
+      "english": "thought, mind, idea",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kurota",
+      "english": "to dream",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "njere",
+      "english": "wisdom, intelligence",
+      "primary_domain": "3",
+      "sub_domain": "3.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kuda",
+      "english": "to want, to love",
+      "primary_domain": "3",
+      "sub_domain": "3.3",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kutsvaka",
+      "english": "to seek",
+      "primary_domain": "3",
+      "sub_domain": "3.3",
+      "secondary_domains": [
+        "7"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kufara",
+      "english": "to be happy",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kutsamwa",
+      "english": "to be angry",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kutya",
+      "english": "to fear",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kusuwa",
+      "english": "to be sad, miss",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "rudo",
+      "english": "love",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "shungu",
+      "english": "passion, zeal",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kunyara",
+      "english": "to be ashamed",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "tariro",
+      "english": "hope",
+      "primary_domain": "3",
+      "sub_domain": "3.4",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kutaura",
+      "english": "to speak",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "shoko",
+      "english": "word, message",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mutauro",
+      "english": "language, dialect",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "ngano",
+      "english": "story, folktale",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "chirevo",
+      "english": "proverb, saying",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "kuimba",
+      "english": "to sing",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "rwiyo",
+      "english": "song",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "kubvunza",
+      "english": "to ask",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kupindura",
+      "english": "to answer",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kunyora",
+      "english": "to write",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kuverenga",
+      "english": "to read, count",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "zita",
+      "english": "name",
+      "primary_domain": "3",
+      "sub_domain": "3.5",
+      "secondary_domains": [
+        "9"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kudzidzisa",
+      "english": "to teach",
+      "primary_domain": "3",
+      "sub_domain": "3.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kudzidza",
+      "english": "to learn",
+      "primary_domain": "3",
+      "sub_domain": "3.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "chikoro",
+      "english": "school",
+      "primary_domain": "3",
+      "sub_domain": "3.6",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mudzidzisi",
+      "english": "teacher",
+      "primary_domain": "3",
+      "sub_domain": "3.6",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "amai",
+      "english": "mother",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "baba",
+      "english": "father",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mwana",
+      "english": "child",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [
+        "2"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "sekuru",
+      "english": "grandfather, uncle",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mbuya",
+      "english": "grandmother",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "hanzvadzi",
+      "english": "sibling",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "muzukuru",
+      "english": "grandchild, nephew",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mukadzi",
+      "english": "wife, woman",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [
+        "2"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "murume",
+      "english": "husband, man",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [
+        "2"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mhuri",
+      "english": "family",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mudzimai",
+      "english": "wife (respectful)",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "tezvara",
+      "english": "father-in-law",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "ambuya",
+      "english": "mother-in-law",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "babamukuru",
+      "english": "father's older brother",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "babamunini",
+      "english": "father's younger brother",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mainini",
+      "english": "mother's younger sister",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "maiguru",
+      "english": "mother's older sister",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mutupo",
+      "english": "clan totem",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "sahwira",
+      "english": "ritual friend",
+      "primary_domain": "4",
+      "sub_domain": "4.1",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mhoro",
+      "english": "hello",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mangwanani",
+      "english": "good morning",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "masikati",
+      "english": "good afternoon",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "manheru",
+      "english": "good evening",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "makadii",
+      "english": "how are you?",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "ndiripo",
+      "english": "I am well",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "tatenda",
+      "english": "thank you",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "fambai zvakanaka",
+      "english": "go well (goodbye)",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "sarai zvakanaka",
+      "english": "stay well (goodbye)",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "pamusoroi",
+      "english": "excuse me",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "ndapota",
+      "english": "please",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "makorokoto",
+      "english": "congratulations",
+      "primary_domain": "4",
+      "sub_domain": "4.2",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "mambo",
+      "english": "king, chief",
+      "primary_domain": "4",
+      "sub_domain": "4.6",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "sadunhu",
+      "english": "headman",
+      "primary_domain": "4",
+      "sub_domain": "4.6",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "dare",
+      "english": "court, council",
+      "primary_domain": "4",
+      "sub_domain": "4.7",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "hondo",
+      "english": "war",
+      "primary_domain": "4",
+      "sub_domain": "4.8",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "runyararo",
+      "english": "peace",
+      "primary_domain": "4",
+      "sub_domain": "4.8",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "vadzimu",
+      "english": "ancestral spirits",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "bira",
+      "english": "ancestral ceremony",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "3",
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "svikiro",
+      "english": "spirit medium",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "2"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mhondoro",
+      "english": "lion spirit",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "Mwari",
+      "english": "God",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kunamata",
+      "english": "to pray, worship",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "3"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "kurova guva",
+      "english": "spirit homecoming",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kugarira",
+      "english": "inheritance ceremony",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "mukwerere",
+      "english": "rain-making ceremony",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "chipunha",
+      "english": "sacred place",
+      "primary_domain": "4",
+      "sub_domain": "4.9",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "imba",
+      "english": "house",
+      "primary_domain": "5",
+      "sub_domain": "5.9",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "musha",
+      "english": "home, village",
+      "primary_domain": "5",
+      "sub_domain": "5.9",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "gonhi",
+      "english": "door",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "hwindo",
+      "english": "window",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "chigaro",
+      "english": "chair, seat",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "tafura",
+      "english": "table",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mubhedha",
+      "english": "bed",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "gumbeze",
+      "english": "blanket",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "hari",
+      "english": "clay pot",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "gate",
+      "english": "plate, dish",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kapu",
+      "english": "cup",
+      "primary_domain": "5",
+      "sub_domain": "5.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "sadza",
+      "english": "thick maize porridge",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "muriwo",
+      "english": "vegetables, greens",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "muto",
+      "english": "soup, gravy",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "mukaka",
+      "english": "milk",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kudya",
+      "english": "to eat, food",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kubika",
+      "english": "to cook",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kunwa",
+      "english": "to drink",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "hwahwa",
+      "english": "traditional beer",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "doro",
+      "english": "beer, alcohol",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "munyu",
+      "english": "salt",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mafuta",
+      "english": "oil, fat",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "zviyo",
+      "english": "millet",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "maputi",
+      "english": "popped maize",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "derere",
+      "english": "okra",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "nyimo",
+      "english": "round nuts",
+      "primary_domain": "5",
+      "sub_domain": "5.2",
+      "secondary_domains": [
+        "6"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "hembe",
+      "english": "shirt, clothing",
+      "primary_domain": "5",
+      "sub_domain": "5.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "bhurukwa",
+      "english": "trousers",
+      "primary_domain": "5",
+      "sub_domain": "5.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "shangu",
+      "english": "shoes",
+      "primary_domain": "5",
+      "sub_domain": "5.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "dhuku",
+      "english": "headscarf",
+      "primary_domain": "5",
+      "sub_domain": "5.3",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "nhembe",
+      "english": "traditional loincloth",
+      "primary_domain": "5",
+      "sub_domain": "5.3",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "moto",
+      "english": "fire",
+      "primary_domain": "5",
+      "sub_domain": "5.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "huni",
+      "english": "firewood",
+      "primary_domain": "5",
+      "sub_domain": "5.5",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "dota",
+      "english": "ashes",
+      "primary_domain": "5",
+      "sub_domain": "5.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "basa",
+      "english": "work, job",
+      "primary_domain": "6",
+      "sub_domain": "6.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kurima",
+      "english": "to farm",
+      "primary_domain": "6",
+      "sub_domain": "6.2",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kukohwa",
+      "english": "to harvest",
+      "primary_domain": "6",
+      "sub_domain": "6.2",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "munda",
+      "english": "field, garden",
+      "primary_domain": "6",
+      "sub_domain": "6.2",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mbeu",
+      "english": "seed",
+      "primary_domain": "6",
+      "sub_domain": "6.2",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "kudyara",
+      "english": "to plant",
+      "primary_domain": "6",
+      "sub_domain": "6.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nhimbe",
+      "english": "communal work party",
+      "primary_domain": "6",
+      "sub_domain": "6.2",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "kuvhima",
+      "english": "to hunt",
+      "primary_domain": "6",
+      "sub_domain": "6.4",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "kubata hove",
+      "english": "to catch fish",
+      "primary_domain": "6",
+      "sub_domain": "6.4",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "mhizha",
+      "english": "craftsperson",
+      "primary_domain": "6",
+      "sub_domain": "6.6",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "muvezi",
+      "english": "carpenter",
+      "primary_domain": "6",
+      "sub_domain": "6.6",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "muumbi",
+      "english": "potter",
+      "primary_domain": "6",
+      "sub_domain": "6.6",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mupfuri",
+      "english": "blacksmith",
+      "primary_domain": "6",
+      "sub_domain": "6.6",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "badza",
+      "english": "hoe",
+      "primary_domain": "6",
+      "sub_domain": "6.7",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "demo",
+      "english": "axe",
+      "primary_domain": "6",
+      "sub_domain": "6.7",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "bakatwa",
+      "english": "knife",
+      "primary_domain": "6",
+      "sub_domain": "6.7",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "museve",
+      "english": "arrow",
+      "primary_domain": "6",
+      "sub_domain": "6.7",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "uta",
+      "english": "bow (weapon)",
+      "primary_domain": "6",
+      "sub_domain": "6.7",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "mari",
+      "english": "money",
+      "primary_domain": "6",
+      "sub_domain": "6.8",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kutenga",
+      "english": "to buy",
+      "primary_domain": "6",
+      "sub_domain": "6.8",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kutengesa",
+      "english": "to sell",
+      "primary_domain": "6",
+      "sub_domain": "6.8",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mutengo",
+      "english": "price",
+      "primary_domain": "6",
+      "sub_domain": "6.8",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "roora",
+      "english": "bride wealth, lobola",
+      "primary_domain": "6",
+      "sub_domain": "6.8",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "kufamba",
+      "english": "to walk, travel",
+      "primary_domain": "7",
+      "sub_domain": "7.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kumhanya",
+      "english": "to run",
+      "primary_domain": "7",
+      "sub_domain": "7.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kuuya",
+      "english": "to come",
+      "primary_domain": "7",
+      "sub_domain": "7.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kuenda",
+      "english": "to go",
+      "primary_domain": "7",
+      "sub_domain": "7.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kugara",
+      "english": "to sit, stay, live",
+      "primary_domain": "7",
+      "sub_domain": "7.1",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kumira",
+      "english": "to stand, wait",
+      "primary_domain": "7",
+      "sub_domain": "7.1",
+      "secondary_domains": [
+        "8"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kurara",
+      "english": "to sleep, lie down",
+      "primary_domain": "7",
+      "sub_domain": "7.1",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kubata",
+      "english": "to hold, catch",
+      "primary_domain": "7",
+      "sub_domain": "7.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kukanda",
+      "english": "to throw",
+      "primary_domain": "7",
+      "sub_domain": "7.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kutakura",
+      "english": "to carry",
+      "primary_domain": "7",
+      "sub_domain": "7.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kurova",
+      "english": "to hit, beat",
+      "primary_domain": "7",
+      "sub_domain": "7.7",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kucheka",
+      "english": "to cut",
+      "primary_domain": "7",
+      "sub_domain": "7.8",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kusuka",
+      "english": "to wash",
+      "primary_domain": "7",
+      "sub_domain": "7.7",
+      "secondary_domains": [
+        "5"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kutamba",
+      "english": "to play, dance",
+      "primary_domain": "7",
+      "sub_domain": "7.2",
+      "secondary_domains": [
+        "4",
+        "3"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kudhonza",
+      "english": "to pull",
+      "primary_domain": "7",
+      "sub_domain": "7.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kusunungura",
+      "english": "to release, free",
+      "primary_domain": "7",
+      "sub_domain": "7.3",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "community"
+    },
+    {
+      "shona": "potsi",
+      "english": "one",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "piri",
+      "english": "two",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "tatu",
+      "english": "three",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "ina",
+      "english": "four",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "shanu",
+      "english": "five",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "tanhatu",
+      "english": "six",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nomwe",
+      "english": "seven",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "sere",
+      "english": "eight",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "pfumbamwe",
+      "english": "nine",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "gumi",
+      "english": "ten",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "zana",
+      "english": "hundred",
+      "primary_domain": "8",
+      "sub_domain": "8.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-kuru",
+      "english": "big, great",
+      "primary_domain": "8",
+      "sub_domain": "8.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-diki",
+      "english": "small, little",
+      "primary_domain": "8",
+      "sub_domain": "8.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-refu",
+      "english": "long, tall",
+      "primary_domain": "8",
+      "sub_domain": "8.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-pfupi",
+      "english": "short",
+      "primary_domain": "8",
+      "sub_domain": "8.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-naka",
+      "english": "beautiful, good",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-ipa",
+      "english": "bad, ugly",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-tsva",
+      "english": "new",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-shava",
+      "english": "brown",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-tsvuku",
+      "english": "red",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "-chena",
+      "english": "white, pure",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [
+        "4"
+      ],
+      "source": "elder"
+    },
+    {
+      "shona": "-tema",
+      "english": "black, dark",
+      "primary_domain": "8",
+      "sub_domain": "8.3",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nhasi",
+      "english": "today",
+      "primary_domain": "8",
+      "sub_domain": "8.4",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "mangwana",
+      "english": "tomorrow",
+      "primary_domain": "8",
+      "sub_domain": "8.4",
+      "secondary_domains": [],
+      "source": "elder"
+    },
+    {
+      "shona": "nezuro",
+      "english": "yesterday",
+      "primary_domain": "8",
+      "sub_domain": "8.4",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "nguva",
+      "english": "time",
+      "primary_domain": "8",
+      "sub_domain": "8.4",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "iye zvino",
+      "english": "now",
+      "primary_domain": "8",
+      "sub_domain": "8.4",
+      "secondary_domains": [],
+      "source": "community"
+    },
+    {
+      "shona": "pano",
+      "english": "here",
+      "primary_domain": "8",
+      "sub_domain": "8.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "apo",
+      "english": "there",
+      "primary_domain": "8",
+      "sub_domain": "8.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kumusoro",
+      "english": "up, above",
+      "primary_domain": "8",
+      "sub_domain": "8.5",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "pasi",
+      "english": "down, ground",
+      "primary_domain": "8",
+      "sub_domain": "8.5",
+      "secondary_domains": [
+        "1"
+      ],
+      "source": "dictionary"
+    },
+    {
+      "shona": "hongu",
+      "english": "yes",
+      "primary_domain": "9",
+      "sub_domain": "9.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kwete",
+      "english": "no",
+      "primary_domain": "9",
+      "sub_domain": "9.1",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "ini",
+      "english": "I, me",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "iwe",
+      "english": "you",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "iye",
+      "english": "he, she",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "isu",
+      "english": "we",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "uye",
+      "english": "and",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "asi",
+      "english": "but",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "kana",
+      "english": "if, or",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "sei",
+      "english": "how, why",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "ani",
+      "english": "who",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    },
+    {
+      "shona": "chii",
+      "english": "what",
+      "primary_domain": "9",
+      "sub_domain": "9.2",
+      "secondary_domains": [],
+      "source": "dictionary"
+    }
+  ]
+}
