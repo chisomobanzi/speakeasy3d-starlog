@@ -1,18 +1,39 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { Search, X, Loader2 } from 'lucide-react';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
 import ConstellationHero from '../components/starlog/ConstellationHero';
 import SuggestWordModal from '../components/starlog/SuggestWordModal';
 import ConstellationQR from '../components/starlog/ConstellationQR';
+import WordDetailModal from '../components/starlog/WordDetailModal';
+import AddToDeckModal from '../components/starlog/AddToDeckModal';
+import SourceSelector from '../components/starlog/SourceSelector';
 import { adaptSeedData, SOURCE_STYLES } from '../lib/constellation-adapter';
 import { useConstellation } from '../hooks/useConstellation';
+import { useConstellationSearch } from '../hooks/useConstellationSearch';
+import { useEntries } from '../hooks/useEntries';
+import { useDecks } from '../hooks/useDecks';
+import { useToast } from '../components/ui/Toast';
+import { useAppStore } from '../stores/appStore';
+import { SOURCES } from '../lib/dictionarySources';
+import { LANGUAGES } from '../lib/languages';
 import seedData from '../data/shona-seed-data.json';
 
 const SEED_DATA_MAP = { sn: seedData };
 
-export default function ConstellationPage() {
-  const { languageCode } = useParams();
+export default function ConstellationPage({ defaultLanguage }) {
+  const { languageCode: urlLanguageCode } = useParams();
+  const activeLanguage = useAppStore((s) => s.activeLanguage);
+  const setActiveLanguage = useAppStore((s) => s.setActiveLanguage);
+  const languageCode = urlLanguageCode || activeLanguage || defaultLanguage || 'sn';
+
+  // Sync URL param back to store so it persists
+  useEffect(() => {
+    if (urlLanguageCode && urlLanguageCode !== activeLanguage) {
+      setActiveLanguage(urlLanguageCode);
+    }
+  }, [urlLanguageCode, activeLanguage, setActiveLanguage]);
 
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [hoveredWord, setHoveredWord] = useState(null);
@@ -21,6 +42,18 @@ export default function ConstellationPage() {
 
   const [showSuggest, setShowSuggest] = useState(false);
   const [showQR, setShowQR] = useState(false);
+
+  // Detail modal state
+  const [detailEntry, setDetailEntry] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Save to deck state
+  const [savingEntry, setSavingEntry] = useState(null);
+  const [showDeckModal, setShowDeckModal] = useState(false);
+
+  const { createEntry } = useEntries();
+  const { fetchDecks } = useDecks();
+  const toast = useToast();
 
   const {
     data: supabaseData,
@@ -46,24 +79,86 @@ export default function ConstellationPage() {
     setSelectedDomain(domainId);
   }, []);
 
+  // Search integration
+  const baseVocabulary = constellationData?.vocabulary || [];
+  const taxonomy = constellationData?.taxonomy || { domains: [] };
+
+  const {
+    query: searchQuery,
+    highlightedIds,
+    augmentedVocabulary,
+    searchResults,
+    isSearching,
+    sourceLoading,
+    search,
+    clearSearch,
+  } = useConstellationSearch(baseVocabulary, taxonomy, languageCode);
+
+  const searchActive = searchQuery?.length >= 2;
+
+  // Empty constellation fallback for languages without seed/Supabase data
+  const emptyConstellation = useMemo(() => ({
+    language: { code: languageCode, name: LANGUAGES.find(l => l.code === languageCode)?.name || languageCode },
+    taxonomy: { domains: [] },
+    vocabulary: [],
+  }), [languageCode]);
+
+  // Star click handler
+  const handleStarClick = useCallback((star) => {
+    const entry = star._searchEntry || {
+      word: star.word,
+      translation: star.translation,
+      language: languageCode,
+      source_type: star.source,
+      _sourceId: star._isSearchResult ? star._sourceId : star.source,
+    };
+    setDetailEntry(entry);
+    setShowDetailModal(true);
+  }, [languageCode]);
+
+  // Save to deck from detail modal
+  const handleSaveToDeckFromDetail = useCallback((enrichedEntry) => {
+    setShowDetailModal(false);
+    setDetailEntry(null);
+    setSavingEntry(enrichedEntry);
+    setShowDeckModal(true);
+    fetchDecks();
+  }, [fetchDecks]);
+
+  const handleDeckSelected = useCallback(async (deckId) => {
+    if (!savingEntry) return;
+
+    const entryData = {
+      deck_id: deckId,
+      word: savingEntry.word,
+      phonetic: savingEntry.phonetic || '',
+      translation: savingEntry.translation || '',
+      language: savingEntry.language || languageCode || 'en',
+      notes: savingEntry.notes || '',
+      tags: savingEntry.tags || [],
+      examples: savingEntry.examples || [],
+      audio_url: savingEntry.audio_url || null,
+      source_type: `external:${savingEntry._sourceId || savingEntry.source_type}`,
+      contributor_name: savingEntry.contributor_name || '',
+    };
+
+    const { error } = await createEntry(entryData);
+    if (!error) {
+      toast.success(`Saved "${savingEntry.word}" to your deck`);
+    }
+
+    setSavingEntry(null);
+    setShowDeckModal(false);
+  }, [savingEntry, createEntry, toast, languageCode]);
+
   if (!languageCode) return <ConstellationHero />;
 
   if (supabaseLoading && !staticData) {
     return <LoadingScreen message="Loading constellation..." />;
   }
 
-  if (!constellationData) {
-    return (
-      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center">
-        <div className="text-center text-slate-400 p-8">
-          <p className="text-xl mb-2">Language not found</p>
-          <p className="text-sm">No constellation data for &ldquo;{languageCode}&rdquo;</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { language, taxonomy, vocabulary } = constellationData;
+  const displayData = constellationData || emptyConstellation;
+  const { language } = displayData;
 
   return (
     <div className="fixed inset-0 flex" style={{
@@ -75,7 +170,7 @@ export default function ConstellationPage() {
         <PublicConstellation
           language={language}
           taxonomy={taxonomy}
-          vocabulary={vocabulary}
+          vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
           selectedDomain={selectedDomain}
           hoveredWord={hoveredWord}
           pulseMap={pulseMap}
@@ -85,6 +180,9 @@ export default function ConstellationPage() {
           showConnections={showConnections}
           onHoverWord={setHoveredWord}
           onSelectDomain={handleSelectDomain}
+          highlightedIds={searchActive ? highlightedIds : null}
+          searchActive={searchActive}
+          onStarClick={handleStarClick}
         />
 
         {/* Title bar with controls */}
@@ -107,7 +205,7 @@ export default function ConstellationPage() {
         {selectedDomain && (
           <WordListPopup
             domain={taxonomy.domains.find(d => d.id === selectedDomain)}
-            vocabulary={vocabulary}
+            vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
             selectedDomain={selectedDomain}
           />
         )}
@@ -126,11 +224,20 @@ export default function ConstellationPage() {
       </div>
 
       {/* Sidebar */}
-      <Sidebar
+      <ConstellationSidebar
         taxonomy={taxonomy}
-        vocabulary={vocabulary}
+        vocabulary={baseVocabulary}
         selectedDomain={selectedDomain}
         onSelectDomain={handleSelectDomain}
+        search={search}
+        clearSearch={clearSearch}
+        searchQuery={searchQuery}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        sourceLoading={sourceLoading}
+        onResultClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
+        languageCode={languageCode}
+        onLanguageChange={setActiveLanguage}
       />
 
       {/* Modals */}
@@ -146,39 +253,168 @@ export default function ConstellationPage() {
         onClose={() => setShowQR(false)}
         url={window.location.href}
       />
+      <WordDetailModal
+        isOpen={showDetailModal}
+        onClose={() => { setShowDetailModal(false); setDetailEntry(null); }}
+        entry={detailEntry}
+        onSaveToDeck={handleSaveToDeckFromDetail}
+      />
+      <AddToDeckModal
+        isOpen={showDeckModal}
+        onClose={() => { setShowDeckModal(false); setSavingEntry(null); }}
+        onSelect={handleDeckSelected}
+      />
     </div>
   );
 }
 
-/* ── Sidebar ── */
-function Sidebar({ taxonomy, vocabulary, selectedDomain, onSelectDomain }) {
+/* ── Constellation Sidebar ── */
+function ConstellationSidebar({
+  taxonomy, vocabulary, selectedDomain, onSelectDomain,
+  search, clearSearch, searchQuery, searchResults, isSearching, sourceLoading,
+  onResultClick, languageCode, onLanguageChange,
+}) {
+  const [localQuery, setLocalQuery] = useState('');
+  const debounceRef = useRef(null);
+
   const totalExpected = taxonomy.domains.reduce((s, d) => s + (d.expected || 0), 0);
   const crossLinks = vocabulary.filter(w => w.domains.length > 1).length;
 
-  // Source counts
   const sourceCounts = useMemo(() => {
     const counts = {};
     vocabulary.forEach(w => { counts[w.source] = (counts[w.source] || 0) + 1; });
     return counts;
   }, [vocabulary]);
 
+  const handleQueryChange = useCallback((value) => {
+    setLocalQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value || value.length < 2) {
+      clearSearch();
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
+      search(value);
+    }, 300);
+  }, [search, clearSearch]);
+
+  const handleLanguageChange = useCallback((e) => {
+    const newLang = e.target.value;
+    onLanguageChange(newLang);
+    setLocalQuery('');
+    clearSearch();
+  }, [onLanguageChange, clearSearch]);
+
+  const handleClear = useCallback(() => {
+    setLocalQuery('');
+    clearSearch();
+  }, [clearSearch]);
+
+  const hasResults = searchResults?.length > 0;
+  const hasQuery = localQuery.length >= 2;
+
   return (
-    <div className="w-[250px] shrink-0 overflow-y-auto border-l"
+    <div className="w-[270px] shrink-0 overflow-y-auto border-l flex flex-col"
       style={{
         background: 'rgba(8,10,18,0.6)',
         borderColor: 'rgba(255,255,255,0.06)',
         fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
       }}>
-      <div className="p-4">
+      <div className="p-3 flex flex-col gap-2.5">
+        {/* Language selector */}
+        <select
+          value={languageCode}
+          onChange={handleLanguageChange}
+          className="w-full h-8 px-2 rounded text-[11px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors appearance-none cursor-pointer"
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 8px center',
+          }}
+        >
+          {LANGUAGES.map(lang => (
+            <option key={lang.code} value={lang.code} style={{ background: '#0a0d1a', color: '#fff' }}>
+              {lang.name} ({lang.code})
+            </option>
+          ))}
+        </select>
+
+        {/* Search input */}
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
+          <input
+            type="text"
+            value={localQuery}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            placeholder="Search..."
+            className="w-full h-8 pl-7 pr-7 rounded text-[12px] bg-white/[.06] text-white placeholder:text-white/30 border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+          />
+          {localQuery && (
+            <button onClick={handleClear} className="absolute right-2 top-1/2 -translate-y-1/2">
+              {isSearching
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: 'rgba(255,255,255,0.4)' }} />
+                : <X className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              }
+            </button>
+          )}
+        </div>
+
+        {/* Source toggles */}
+        <div className="flex flex-wrap gap-1">
+          <SourceSelector loading={sourceLoading} />
+        </div>
+      </div>
+
+      {/* Search results */}
+      {hasQuery && (
+        <div className="px-3 pb-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          {hasResults ? (
+            <div className="max-h-[200px] overflow-y-auto space-y-0.5">
+              {searchResults.slice(0, 30).map((result, i) => {
+                const source = SOURCES[result._sourceId];
+                return (
+                  <button
+                    key={`${result._sourceId}-${result.word}-${i}`}
+                    onClick={() => onResultClick(result)}
+                    className="w-full flex items-center gap-1.5 px-1.5 py-1 rounded text-left hover:bg-white/[.05] transition-colors"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: source?.color || '#7BA3E0' }}
+                    />
+                    <span className="text-[10px] text-white font-medium truncate flex-1">
+                      {result.word}
+                    </span>
+                    <span className="text-[9px] truncate max-w-[80px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      {result.translation}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : !isSearching ? (
+            <div className="text-[10px] py-2 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              No results for &ldquo;{localQuery}&rdquo;
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Domain stats + source legend */}
+      <div className="flex-1 overflow-y-auto p-3">
         {/* Header */}
-        <div className="text-center pb-3 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="text-center pb-3 mb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="text-[28px] font-extrabold text-white">{vocabulary.length}</div>
           <div className="text-[10px] tracking-[0.15em] uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>
             words documented
           </div>
-          <div className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            of ~{totalExpected} estimated ({Math.round(vocabulary.length / totalExpected * 100)}%)
-          </div>
+          {totalExpected > 0 && (
+            <div className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              of ~{totalExpected} estimated ({Math.round(vocabulary.length / totalExpected * 100)}%)
+            </div>
+          )}
           <div className="text-[10px] mt-1 text-cyan-400">
             {crossLinks} cross-domain links
           </div>
