@@ -1,8 +1,10 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Search, X, Loader2 } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
+import StarsCanvas from '../components/starlog/StarsCanvas';
 import ConstellationHero from '../components/starlog/ConstellationHero';
 import SuggestWordModal from '../components/starlog/SuggestWordModal';
 import ConstellationQR from '../components/starlog/ConstellationQR';
@@ -51,6 +53,7 @@ export default function ConstellationPage({ defaultLanguage }) {
   const [savingEntry, setSavingEntry] = useState(null);
   const [showDeckModal, setShowDeckModal] = useState(false);
 
+  const { user, profile, signOut } = useAuth();
   const { createEntry } = useEntries();
   const { fetchDecks } = useDecks();
   const toast = useToast();
@@ -165,6 +168,9 @@ export default function ConstellationPage({ defaultLanguage }) {
       background: 'radial-gradient(ellipse at center, #0a0d1a 0%, #050710 70%, #020308 100%)',
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
     }}>
+      {/* Star field background */}
+      <StarsCanvas />
+
       {/* Viz area */}
       <div className="flex-1 relative flex items-center justify-center">
         <PublicConstellation
@@ -238,6 +244,9 @@ export default function ConstellationPage({ defaultLanguage }) {
         onResultClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
         languageCode={languageCode}
         onLanguageChange={setActiveLanguage}
+        user={user}
+        profile={profile}
+        signOut={signOut}
       />
 
       {/* Modals */}
@@ -273,6 +282,7 @@ function ConstellationSidebar({
   taxonomy, vocabulary, selectedDomain, onSelectDomain,
   search, clearSearch, searchQuery, searchResults, isSearching, sourceLoading,
   onResultClick, languageCode, onLanguageChange,
+  user, profile, signOut,
 }) {
   const [localQuery, setLocalQuery] = useState('');
   const debounceRef = useRef(null);
@@ -316,7 +326,7 @@ function ConstellationSidebar({
   return (
     <div className="w-[270px] shrink-0 overflow-y-auto border-l flex flex-col"
       style={{
-        background: 'rgba(8,10,18,0.6)',
+        background: 'rgba(8,10,18,0.92)',
         borderColor: 'rgba(255,255,255,0.06)',
         fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
       }}>
@@ -459,6 +469,34 @@ function ConstellationSidebar({
           Domain structure: SIL International Semantic Domains v4 (semdom.org). CC BY-SA 4.0.
           Originally developed from Bantu languages (Kifuliiru, Gikuyu, Lugwere).
         </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="mt-auto shrink-0 p-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <Link to="/decks" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors">
+          <BookOpen className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>My Decks</span>
+        </Link>
+        <Link to="/settings" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors">
+          <Settings className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>Settings</span>
+        </Link>
+        {user ? (
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+            <span className="text-[10px] truncate flex-1 text-left" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              {profile?.display_name || user.email}
+            </span>
+          </button>
+        ) : (
+          <Link to="/login" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors">
+            <LogIn className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>Sign in</span>
+          </Link>
+        )}
       </div>
     </div>
   );
