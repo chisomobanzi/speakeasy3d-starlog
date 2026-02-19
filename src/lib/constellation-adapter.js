@@ -1,8 +1,9 @@
 // Transforms seed data and Supabase RPC data into the shape
 // expected by PublicConstellation / LanguageConstellation
 
-// Source-based visual encoding (replaces DOC_STATUS_STYLES)
-export const SOURCE_STYLES = {
+// Source-based visual encoding — DEPRECATED: use useSourceRegistry() instead.
+// Kept as private const for any legacy internal references.
+const SOURCE_STYLES = {
   elder:      { scale: 1.0,  opacity: 1.0,  glow: true,  coreColor: '#FFD700', symbol: '\u25C6', label: 'Elder-verified' },
   community:  { scale: 0.9,  opacity: 0.85, glow: true,  coreColor: '#00D4FF', symbol: '\u25C7', label: 'Community-contributed' },
   dictionary: { scale: 0.8,  opacity: 0.7,  glow: false, coreColor: '#7BA3E0', symbol: '\u25CF', label: 'Published dictionary' },

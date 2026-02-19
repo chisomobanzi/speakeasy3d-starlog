@@ -23,8 +23,11 @@ export const useAppStore = create(
       recentDecks: [],
       recentSearches: [],
 
-      // Dictionary source toggles
-      enabledSources: ['personal', 'community', 'freeDictionary', 'wiktionary'],
+      // Dictionary search source toggles
+      enabledSources: ['personal', 'community_search', 'freeDictionary', 'wiktionary'],
+
+      // Constellation source filter (null = show all)
+      enabledConstellationSources: null,
 
       // User preferences
       preferences: {
@@ -60,6 +63,19 @@ export const useAppStore = create(
           : [...state.enabledSources, sourceId]
       })),
 
+      toggleConstellationSource: (sourceId, allSourceIds) => set((state) => {
+        // If null (show all), initialize with all IDs minus the toggled one
+        if (state.enabledConstellationSources === null) {
+          return { enabledConstellationSources: allSourceIds.filter(id => id !== sourceId) };
+        }
+        const current = state.enabledConstellationSources;
+        const next = current.includes(sourceId)
+          ? current.filter(id => id !== sourceId)
+          : [...current, sourceId];
+        // If all are re-enabled, go back to null (show all)
+        return { enabledConstellationSources: next.length >= allSourceIds.length ? null : next };
+      }),
+
       // Offline queue management
       addToOfflineQueue: (action) => set((state) => ({
         offlineQueue: [...state.offlineQueue, { id: Date.now(), ...action }]
@@ -94,6 +110,7 @@ export const useAppStore = create(
         preferences: state.preferences,
         offlineQueue: state.offlineQueue,
         enabledSources: state.enabledSources,
+        enabledConstellationSources: state.enabledConstellationSources,
         activeLanguage: state.activeLanguage,
       }),
     }

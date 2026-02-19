@@ -1,4 +1,4 @@
-import { SOURCE_STYLES } from '../../lib/constellation-adapter';
+import { BUILTIN_SOURCE_MAP } from '../../lib/builtinSources';
 
 /**
  * Word node for the public constellation, styled by source attribution.
@@ -16,7 +16,14 @@ export default function PublicWordNode({
   onHover,
   onClick,
 }) {
-  const style = SOURCE_STYLES[word.source] || SOURCE_STYLES.dictionary;
+  const srcEntry = BUILTIN_SOURCE_MAP.get(word.source) || BUILTIN_SOURCE_MAP.get('dictionary');
+  const style = {
+    scale: srcEntry?.scale ?? 0.8,
+    opacity: srcEntry?.opacity ?? 0.7,
+    glow: srcEntry?.glow ?? false,
+    coreColor: srcEntry?.core_color ?? '#7BA3E0',
+    symbol: srcEntry?.symbol ?? '\u25CF',
+  };
   const baseSize = 0.04;
   const size = baseSize * style.scale * (isSelected ? 1.5 : isHovered ? 1.2 : 1);
   const color = domain?.color || '#8b5cf6';

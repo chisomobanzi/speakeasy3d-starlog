@@ -11,14 +11,14 @@ import ConstellationQR from '../components/starlog/ConstellationQR';
 import WordDetailModal from '../components/starlog/WordDetailModal';
 import AddToDeckModal from '../components/starlog/AddToDeckModal';
 import SourceSelector from '../components/starlog/SourceSelector';
-import { adaptSeedData, SOURCE_STYLES } from '../lib/constellation-adapter';
+import { adaptSeedData } from '../lib/constellation-adapter';
 import { useConstellation } from '../hooks/useConstellation';
 import { useConstellationSearch } from '../hooks/useConstellationSearch';
+import { useSourceRegistry } from '../hooks/useSourceRegistry';
 import { useEntries } from '../hooks/useEntries';
 import { useDecks } from '../hooks/useDecks';
 import { useToast } from '../components/ui/Toast';
 import { useAppStore } from '../stores/appStore';
-import { SOURCES } from '../lib/dictionarySources';
 import { LANGUAGES } from '../lib/languages';
 import seedData from '../data/shona-seed-data.json';
 
@@ -41,6 +41,7 @@ export default function ConstellationPage({ defaultLanguage }) {
   const [hoveredWord, setHoveredWord] = useState(null);
   const [colorMode, setColorMode] = useState('domain');
   const [showConnections, setShowConnections] = useState(true);
+  const [showStars, setShowStars] = useState(true);
 
   const [showSuggest, setShowSuggest] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -57,6 +58,12 @@ export default function ConstellationPage({ defaultLanguage }) {
   const { createEntry } = useEntries();
   const { fetchDecks } = useDecks();
   const toast = useToast();
+
+  // Source registry
+  const { sourceMap, provenanceSources, getSourceStyle } = useSourceRegistry(languageCode);
+
+  // Constellation source filtering
+  const enabledCS = useAppStore((s) => s.enabledConstellationSources);
 
   const {
     data: supabaseData,
@@ -83,8 +90,16 @@ export default function ConstellationPage({ defaultLanguage }) {
   }, []);
 
   // Search integration
-  const baseVocabulary = constellationData?.vocabulary || [];
+  const allVocabulary = constellationData?.vocabulary || [];
   const taxonomy = constellationData?.taxonomy || { domains: [] };
+
+  // Apply constellation source filter
+  const baseVocabulary = useMemo(
+    () => enabledCS
+      ? allVocabulary.filter(w => enabledCS.includes(w.source))
+      : allVocabulary,
+    [allVocabulary, enabledCS]
+  );
 
   const {
     query: searchQuery,
@@ -95,7 +110,7 @@ export default function ConstellationPage({ defaultLanguage }) {
     sourceLoading,
     search,
     clearSearch,
-  } = useConstellationSearch(baseVocabulary, taxonomy, languageCode);
+  } = useConstellationSearch(baseVocabulary, taxonomy, languageCode, sourceMap);
 
   const searchActive = searchQuery?.length >= 2;
 
@@ -169,7 +184,7 @@ export default function ConstellationPage({ defaultLanguage }) {
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
     }}>
       {/* Star field background */}
-      <StarsCanvas />
+      {showStars && <StarsCanvas />}
 
       {/* Viz area */}
       <div className="flex-1 relative flex items-center justify-center">
@@ -189,6 +204,7 @@ export default function ConstellationPage({ defaultLanguage }) {
           highlightedIds={searchActive ? highlightedIds : null}
           searchActive={searchActive}
           onStarClick={handleStarClick}
+          sourceMap={sourceMap}
         />
 
         {/* Title bar with controls */}
@@ -205,6 +221,10 @@ export default function ConstellationPage({ defaultLanguage }) {
             className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${showConnections ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[.04] text-white/40'}`}
             onClick={() => setShowConnections(v => !v)}
           >Links</button>
+          <button
+            className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${showStars ? 'bg-pink-500/15 text-pink-400' : 'bg-white/[.04] text-white/40'}`}
+            onClick={() => setShowStars(v => !v)}
+          >Stars</button>
         </div>
 
         {/* Word list popup when domain is selected */}
@@ -213,6 +233,7 @@ export default function ConstellationPage({ defaultLanguage }) {
             domain={taxonomy.domains.find(d => d.id === selectedDomain)}
             vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
             selectedDomain={selectedDomain}
+            sourceMap={sourceMap}
           />
         )}
 
@@ -233,6 +254,7 @@ export default function ConstellationPage({ defaultLanguage }) {
       <ConstellationSidebar
         taxonomy={taxonomy}
         vocabulary={baseVocabulary}
+        allVocabulary={allVocabulary}
         selectedDomain={selectedDomain}
         onSelectDomain={handleSelectDomain}
         search={search}
@@ -247,6 +269,9 @@ export default function ConstellationPage({ defaultLanguage }) {
         user={user}
         profile={profile}
         signOut={signOut}
+        sourceMap={sourceMap}
+        provenanceSources={provenanceSources}
+        getSourceStyle={getSourceStyle}
       />
 
       {/* Modals */}
@@ -279,22 +304,34 @@ export default function ConstellationPage({ defaultLanguage }) {
 
 /* ── Constellation Sidebar ── */
 function ConstellationSidebar({
-  taxonomy, vocabulary, selectedDomain, onSelectDomain,
+  taxonomy, vocabulary, allVocabulary, selectedDomain, onSelectDomain,
   search, clearSearch, searchQuery, searchResults, isSearching, sourceLoading,
   onResultClick, languageCode, onLanguageChange,
   user, profile, signOut,
+  sourceMap, provenanceSources, getSourceStyle,
 }) {
   const [localQuery, setLocalQuery] = useState('');
   const debounceRef = useRef(null);
+
+  const enabledCS = useAppStore((s) => s.enabledConstellationSources);
+  const toggleConstellationSource = useAppStore((s) => s.toggleConstellationSource);
 
   const totalExpected = taxonomy.domains.reduce((s, d) => s + (d.expected || 0), 0);
   const crossLinks = vocabulary.filter(w => w.domains.length > 1).length;
 
   const sourceCounts = useMemo(() => {
     const counts = {};
-    vocabulary.forEach(w => { counts[w.source] = (counts[w.source] || 0) + 1; });
+    (allVocabulary || vocabulary).forEach(w => { counts[w.source] = (counts[w.source] || 0) + 1; });
     return counts;
-  }, [vocabulary]);
+  }, [allVocabulary, vocabulary]);
+
+  // All provenance source IDs that have words in the constellation
+  const allProvenanceIds = useMemo(
+    () => provenanceSources.map(s => s.id).concat(
+      Object.keys(sourceCounts).filter(k => !provenanceSources.some(s => s.id === k))
+    ),
+    [provenanceSources, sourceCounts]
+  );
 
   const handleQueryChange = useCallback((value) => {
     setLocalQuery(value);
@@ -373,7 +410,7 @@ function ConstellationSidebar({
 
         {/* Source toggles */}
         <div className="flex flex-wrap gap-1">
-          <SourceSelector loading={sourceLoading} />
+          <SourceSelector loading={sourceLoading} languageCode={languageCode} />
         </div>
       </div>
 
@@ -383,7 +420,7 @@ function ConstellationSidebar({
           {hasResults ? (
             <div className="max-h-[200px] overflow-y-auto space-y-0.5">
               {searchResults.slice(0, 30).map((result, i) => {
-                const source = SOURCES[result._sourceId];
+                const meta = sourceMap?.get(result._sourceId);
                 return (
                   <button
                     key={`${result._sourceId}-${result.word}-${i}`}
@@ -392,7 +429,7 @@ function ConstellationSidebar({
                   >
                     <span
                       className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: source?.color || '#7BA3E0' }}
+                      style={{ backgroundColor: meta?.core_color || '#7BA3E0' }}
                     />
                     <span className="text-[10px] text-white font-medium truncate flex-1">
                       {result.word}
@@ -438,23 +475,30 @@ function ConstellationSidebar({
             vocabulary={vocabulary}
             isSelected={selectedDomain === d.id}
             onClick={() => onSelectDomain(selectedDomain === d.id ? null : d.id)}
+            getSourceStyle={getSourceStyle}
           />
         ))}
 
-        {/* Source legend */}
+        {/* Source legend + display filter */}
         <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="text-[9px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Sources
+            Display
           </div>
-          {Object.entries(SOURCE_STYLES).map(([key, meta]) => {
-            const count = sourceCounts[key] || 0;
+          {Object.entries(sourceCounts).map(([key, count]) => {
             if (count === 0) return null;
+            const style = getSourceStyle(key);
+            const isEnabled = enabledCS === null || enabledCS.includes(key);
             return (
-              <div key={key} className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[11px] w-3.5 text-center" style={{ color: meta.coreColor }}>{meta.symbol}</span>
-                <span className="text-[9px] flex-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{meta.label}</span>
+              <button
+                key={key}
+                className="w-full flex items-center gap-1.5 mb-0.5 text-left transition-opacity"
+                style={{ opacity: isEnabled ? 1 : 0.35 }}
+                onClick={() => toggleConstellationSource(key, allProvenanceIds)}
+              >
+                <span className="text-[11px] w-3.5 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
+                <span className="text-[9px] flex-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{style.label}</span>
                 <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{count}</span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -503,7 +547,7 @@ function ConstellationSidebar({
 }
 
 /* ── Domain Row ── */
-function DomainRow({ domain, vocabulary, isSelected, onClick }) {
+function DomainRow({ domain, vocabulary, isSelected, onClick, getSourceStyle }) {
   const primary = useMemo(() => vocabulary.filter(w => w.domains[0] === domain.id), [vocabulary, domain.id]);
   const secondary = useMemo(() => vocabulary.filter(w => w.domains.includes(domain.id) && w.domains[0] !== domain.id), [vocabulary, domain.id]);
   const pct = domain.expected ? Math.round((primary.length / domain.expected) * 100) : 0;
@@ -547,11 +591,10 @@ function DomainRow({ domain, vocabulary, isSelected, onClick }) {
       {isSelected && (
         <div className="flex gap-1.5 mt-1.5 flex-wrap">
           {Object.entries(bySource).map(([src, count]) => {
-            const meta = SOURCE_STYLES[src];
-            if (!meta) return null;
+            const style = getSourceStyle(src);
             return (
-              <span key={src} className="text-[9px]" style={{ color: meta.coreColor, opacity: 0.8 }}>
-                {meta.symbol}{count}
+              <span key={src} className="text-[9px]" style={{ color: style.coreColor, opacity: 0.8 }}>
+                {style.symbol}{count}
               </span>
             );
           })}
@@ -567,7 +610,7 @@ function DomainRow({ domain, vocabulary, isSelected, onClick }) {
 }
 
 /* ── Word List Popup ── */
-function WordListPopup({ domain, vocabulary, selectedDomain }) {
+function WordListPopup({ domain, vocabulary, selectedDomain, sourceMap }) {
   if (!domain) return null;
 
   const domainWords = useMemo(
@@ -578,6 +621,14 @@ function WordListPopup({ domain, vocabulary, selectedDomain }) {
     () => vocabulary.filter(w => w.domains.includes(selectedDomain) && w.domains[0] !== selectedDomain),
     [vocabulary, selectedDomain]
   );
+
+  const getStyle = useCallback((source) => {
+    const s = sourceMap?.get(source) || sourceMap?.get('dictionary');
+    return {
+      coreColor: s?.core_color || '#7BA3E0',
+      symbol: s?.symbol || '\u25CF',
+    };
+  }, [sourceMap]);
 
   return (
     <div
@@ -594,10 +645,10 @@ function WordListPopup({ domain, vocabulary, selectedDomain }) {
         {domain.name} &mdash; {domainWords.length} words
       </div>
       {domainWords.slice(0, 20).map(w => {
-        const meta = SOURCE_STYLES[w.source] || SOURCE_STYLES.dictionary;
+        const style = getStyle(w.source);
         return (
           <div key={w.id} className="flex gap-2 mb-0.5 text-[10px]">
-            <span className="w-2.5" style={{ color: meta.coreColor }}>{meta.symbol}</span>
+            <span className="w-2.5" style={{ color: style.coreColor }}>{style.symbol}</span>
             <span className="text-white font-semibold min-w-[70px]">{w.word}</span>
             <span style={{ color: 'rgba(255,255,255,0.4)' }}>{w.translation}</span>
           </div>

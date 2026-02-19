@@ -1,6 +1,6 @@
 import { BookOpen, Users, BookMarked, Globe } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
-import { SOURCES, ALL_SOURCE_IDS } from '../../lib/dictionarySources';
+import { useSourceRegistry } from '../../hooks/useSourceRegistry';
 
 const ICON_MAP = {
   BookOpen,
@@ -9,22 +9,23 @@ const ICON_MAP = {
   Globe,
 };
 
-export default function SourceSelector({ loading = {} }) {
+export default function SourceSelector({ loading = {}, languageCode }) {
   const enabledSources = useAppStore((s) => s.enabledSources);
   const toggleSource = useAppStore((s) => s.toggleSource);
+  const { searchSources } = useSourceRegistry(languageCode);
 
   return (
     <div className="flex flex-wrap gap-2">
-      {ALL_SOURCE_IDS.map(id => {
-        const source = SOURCES[id];
+      {searchSources.map(source => {
         const Icon = ICON_MAP[source.icon];
-        const enabled = enabledSources.includes(id);
-        const isLoading = loading[id];
+        const enabled = enabledSources.includes(source.id);
+        const isLoading = loading[source.id];
+        const color = source.core_color;
 
         return (
           <button
-            key={id}
-            onClick={() => toggleSource(id)}
+            key={source.id}
+            onClick={() => toggleSource(source.id)}
             className={`
               inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
               transition-all duration-200 border
@@ -35,13 +36,13 @@ export default function SourceSelector({ loading = {} }) {
               ${isLoading ? 'animate-pulse' : ''}
             `}
             style={enabled ? {
-              backgroundColor: `${source.color}20`,
-              color: source.color,
-              borderColor: `${source.color}30`,
+              backgroundColor: `${color}20`,
+              color: color,
+              borderColor: `${color}30`,
             } : undefined}
           >
             {Icon && <Icon className="w-3.5 h-3.5" />}
-            {source.shortName}
+            {source.short_name}
           </button>
         );
       })}

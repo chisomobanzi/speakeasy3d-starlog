@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { Skeleton } from '../ui/LoadingSpinner';
 import { fetchFullEntry } from '../../lib/adapters/fetchFullEntry';
-import { SOURCES } from '../../lib/dictionarySources';
+import { BUILTIN_SOURCE_MAP } from '../../lib/builtinSources';
 import { translateExamples } from '../../lib/translate';
 
 export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }) {
@@ -17,8 +17,8 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
   const audioRef = useRef(null);
 
   const sourceId = entry?._sourceId || entry?.source_type;
-  const source = SOURCES[sourceId];
-  const isExternal = source && !source.isBuiltIn;
+  const source = BUILTIN_SOURCE_MAP.get(sourceId);
+  const isExternal = source && !source.is_builtin;
 
   // Fetch full data when modal opens for external sources
   useEffect(() => {
@@ -170,9 +170,9 @@ export default function WordDetailModal({ isOpen, onClose, entry, onSaveToDeck }
     return (
       <span
         className="px-2 py-0.5 text-xs rounded-full font-medium"
-        style={{ backgroundColor: `${source.color}20`, color: source.color }}
+        style={{ backgroundColor: `${source.core_color}20`, color: source.core_color }}
       >
-        {source.shortName}
+        {source.short_name}
       </span>
     );
   };

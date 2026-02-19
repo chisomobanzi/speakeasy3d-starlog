@@ -9,8 +9,9 @@ import { mergeSearchResults } from '../lib/mergeSearchIntoConstellation';
  * @param {Array} baseVocabulary - Constellation vocabulary items
  * @param {{ domains: Array }} taxonomy - Domain taxonomy from constellation data
  * @param {string} [languageCode] - Language code to scope search results
+ * @param {Map} [sourceMap] - Optional source registry map for source resolution
  */
-export function useConstellationSearch(baseVocabulary, taxonomy, languageCode) {
+export function useConstellationSearch(baseVocabulary, taxonomy, languageCode, sourceMap) {
   const {
     query,
     combinedResults,
@@ -26,8 +27,8 @@ export function useConstellationSearch(baseVocabulary, taxonomy, languageCode) {
   );
 
   const { highlightedIds, augmentedVocabulary } = useMemo(
-    () => mergeSearchResults(baseVocabulary, combinedResults, taxonomy),
-    [baseVocabulary, combinedResults, taxonomy]
+    () => mergeSearchResults(baseVocabulary, combinedResults, taxonomy, sourceMap),
+    [baseVocabulary, combinedResults, taxonomy, sourceMap]
   );
 
   return {

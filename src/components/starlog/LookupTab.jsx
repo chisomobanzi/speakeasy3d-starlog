@@ -8,7 +8,7 @@ import { useDictionarySearch } from '../../hooks/useDictionarySearch';
 import { useEntries } from '../../hooks/useEntries';
 import { useDecks } from '../../hooks/useDecks';
 import { useAppStore } from '../../stores/appStore';
-import { SOURCES } from '../../lib/dictionarySources';
+import { BUILTIN_SOURCE_MAP } from '../../lib/builtinSources';
 import { LANGUAGES } from '../../lib/languages';
 import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
@@ -136,15 +136,16 @@ export default function LookupTab() {
 
   const renderSourceBadge = (source) => {
     if (!source) return null;
+    const color = source.core_color || source.color;
     return (
       <span
         className="px-2 py-0.5 text-xs rounded-full font-medium"
         style={{
-          backgroundColor: `${source.color}20`,
-          color: source.color,
+          backgroundColor: `${color}20`,
+          color: color,
         }}
       >
-        {source.shortName}
+        {source.short_name || source.shortName}
       </span>
     );
   };
@@ -295,14 +296,14 @@ export default function LookupTab() {
               <div className="flex items-center gap-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: source.color }}
+                  style={{ backgroundColor: source.core_color || source.color }}
                 />
                 <h3 className="text-sm font-medium text-slate-300">{source.name}</h3>
                 <span className="text-xs text-slate-500">{sourceResults.length}</span>
               </div>
 
               {sourceResults.map(entry => {
-                const isExternal = !source.isBuiltIn;
+                const isExternal = !source.is_builtin;
 
                 return (
                   <EntryCard

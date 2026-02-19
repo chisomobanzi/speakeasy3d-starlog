@@ -122,6 +122,43 @@ export async function searchDictionary(supabase, { query, language, deckId, sour
 }
 
 /**
+ * Generate a 6-digit VR pairing code for the authenticated user.
+ * Prior unclaimed codes are automatically invalidated.
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @returns {Promise<{ code: string, expires_at: string }>}
+ */
+export async function generatePairingCode(supabase) {
+  const { data, error } = await supabase.rpc('generate_pairing_code');
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Claim a VR pairing code and receive a session (called from VR app, no auth).
+ * Uses direct fetch since the caller has no Supabase session yet.
+ *
+ * @param {string} supabaseUrl - Project URL (e.g. https://xxx.supabase.co)
+ * @param {string} anonKey - Supabase anon/public key
+ * @param {string} code - 6-digit pairing code
+ * @returns {Promise<{ access_token: string, refresh_token: string, expires_in: number, user: { id: string, email: string } }>}
+ */
+export async function claimPairingCode(supabaseUrl, anonKey, code) {
+  const res = await fetch(`${supabaseUrl}/functions/v1/claim-pairing-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${anonKey}`,
+      'apikey': anonKey,
+    },
+    body: JSON.stringify({ code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to claim pairing code');
+  return data;
+}
+
+/**
  * Unified fan-out dictionary lookup across all 4 sources:
  * personal entries, community entries, Free Dictionary API, and Wiktionary API.
  *

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { SOURCE_STYLES } from '../../lib/constellation-adapter';
+import { BUILTIN_SOURCE_MAP } from '../../lib/builtinSources';
 
 // Seeded PRNG matching the mockup
 function seededRandom(seed) {
@@ -23,24 +23,54 @@ export default function PublicConstellation({
   showConnections = true,
   onHoverWord,
   onSelectDomain,
+  // Search integration props
+  highlightedIds = null,
+  searchActive = false,
+  onStarClick,
+  // Source registry map (falls back to BUILTIN_SOURCE_MAP)
+  sourceMap,
 }) {
+  const resolvedSourceMap = sourceMap || BUILTIN_SOURCE_MAP;
   // Compute star positions using angular layout (matches mockup)
   const stars = useMemo(() => {
     return vocabulary.map((w, i) => {
       const domain = taxonomy.domains.find(d => d.id === w.domains[0]);
       if (!domain) return null;
+
+      const isExternal = w._isSearchResult;
+      const lowConfidence = isExternal && (w._confidence || 0) < 0.5;
+
       const rng = seededRandom(i * 7919 + (w.word.charCodeAt(0) || 0) * 31);
       const baseAngle = domain.angle ?? 0;
       const jitter = (rng() - 0.5) * SECTOR_SPREAD * 2;
       const angle = ((baseAngle + jitter) * Math.PI) / 180;
-      const dist = 60 + rng() * (DOMAIN_RADIUS - 90);
+
+      // Low-confidence external stars go to inner ring
+      let dist;
+      if (lowConfidence) {
+        dist = 60 + rng() * 60; // radius 60-120
+      } else {
+        dist = 60 + rng() * (DOMAIN_RADIUS - 90);
+      }
+
       const px = CX + Math.cos(angle) * dist;
       const py = CY + Math.sin(angle) * dist;
-      const srcStyle = SOURCE_STYLES[w.source] || SOURCE_STYLES.dictionary;
-      const size = w.source === 'elder' ? 6 : w.source === 'community' ? 5 : w.source === 'dictionary' ? 4 : 3;
-      return { ...w, px, py, size, idx: i, srcStyle, domainColor: domain.color };
+      const srcEntry = resolvedSourceMap.get(w.source) || resolvedSourceMap.get('dictionary');
+      const srcStyle = {
+        scale: srcEntry?.scale ?? 0.8,
+        opacity: srcEntry?.opacity ?? 0.7,
+        glow: srcEntry?.glow ?? false,
+        coreColor: srcEntry?.core_color ?? '#7BA3E0',
+        symbol: srcEntry?.symbol ?? '\u25CF',
+        label: srcEntry?.name ?? w.source,
+      };
+
+      let size = w.source === 'elder' ? 6 : w.source === 'community' ? 5 : w.source === 'dictionary' ? 4 : 3;
+      if (isExternal) size = size * 0.7;
+
+      return { ...w, px, py, size, idx: i, srcStyle, domainColor: domain.color, _isExternal: isExternal };
     }).filter(Boolean);
-  }, [vocabulary, taxonomy.domains]);
+  }, [vocabulary, taxonomy.domains, resolvedSourceMap]);
 
   const crossLinks = useMemo(() => stars.filter(s => s.domains.length > 1).length, [stars]);
 
@@ -151,8 +181,22 @@ export default function PublicConstellation({
           const isHovered = hoveredWord === star.id;
           const isDimmed = isSel && !isInSelected && !isSecondary;
           const fillColor = colorMode === 'source' ? star.srcStyle.coreColor || '#7BA3E0' : star.domainColor;
-          const opacity = isDimmed ? 0.12 : isSecondary ? 0.7 : 1;
-          const glowSize = isHovered ? star.size * 5 : star.size * 2.5;
+
+          // Search highlighting
+          const isHighlighted = highlightedIds?.has(star.id);
+          const isExternal = star._isExternal;
+
+          // Opacity: search mode dims non-highlighted/non-external stars
+          let opacity;
+          if (searchActive && highlightedIds) {
+            if (isHighlighted) opacity = 1;
+            else if (isExternal) opacity = 0.6;
+            else opacity = 0.15;
+          } else {
+            opacity = isDimmed ? 0.12 : isSecondary ? 0.7 : 1;
+          }
+
+          const glowSize = isHighlighted ? star.size * 6 : isHovered ? star.size * 5 : star.size * 2.5;
 
           // Pulse from Wikipedia signals
           const pulse = pulseMap[star.id];
@@ -162,9 +206,21 @@ export default function PublicConstellation({
             <g key={star.id} opacity={opacity} style={{ transition: 'opacity 0.3s ease' }}>
               {/* Glow */}
               <circle cx={star.px} cy={star.py} r={glowSize} fill={fillColor}
-                opacity={isHovered ? 0.35 : 0.12} />
-              {/* Pulse ring */}
-              {pulseIntensity > 0.05 && (
+                opacity={isHighlighted ? 0.4 : isHovered ? 0.35 : 0.12} />
+
+              {/* Highlighted pulse ring */}
+              {isHighlighted && (
+                <circle cx={star.px} cy={star.py} r={star.size * 2.5} fill="none"
+                  stroke={fillColor} strokeWidth={1} opacity={0.7}>
+                  <animate attributeName="r" values={`${star.size * 2};${star.size * 4};${star.size * 2}`}
+                    dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0.15;0.7"
+                    dur="2s" repeatCount="indefinite" />
+                </circle>
+              )}
+
+              {/* Wikipedia pulse ring */}
+              {pulseIntensity > 0.05 && !isHighlighted && (
                 <circle cx={star.px} cy={star.py} r={star.size * 2} fill="none"
                   stroke={fillColor} strokeWidth={0.8} opacity={pulseIntensity * 0.6}>
                   <animate attributeName="r" values={`${star.size * 1.5};${star.size * 3};${star.size * 1.5}`}
@@ -173,27 +229,43 @@ export default function PublicConstellation({
                     dur={`${2.5 - pulseIntensity * 2}s`} repeatCount="indefinite" />
                 </circle>
               )}
+
               {/* Core */}
               <circle cx={star.px} cy={star.py} r={star.size}
                 fill={star.source === 'elder' ? '#FFFFFF' : fillColor}
                 stroke={isSecondary ? '#FFFFFF' : fillColor}
-                strokeWidth={isHovered ? 1.5 : 0.5}
+                strokeWidth={isHighlighted ? 2 : isHovered ? 1.5 : 0.5}
                 opacity={star.srcStyle.opacity} />
+
               {/* Elder white center */}
               {star.source === 'elder' && (
                 <circle cx={star.px} cy={star.py} r={star.size * 0.45} fill="#FFFFFF" opacity={0.95} />
               )}
-              {/* Secondary dashed ring */}
-              {isSecondary && (
+
+              {/* External search result: dashed ring */}
+              {isExternal && (
+                <circle cx={star.px} cy={star.py} r={star.size + 3}
+                  fill="none" stroke={fillColor} strokeWidth={0.7} strokeDasharray="2,2" opacity={0.5} />
+              )}
+
+              {/* Secondary dashed ring (cross-domain) */}
+              {isSecondary && !isExternal && (
                 <circle cx={star.px} cy={star.py} r={star.size + 3}
                   fill="none" stroke="#FFFFFF" strokeWidth={0.7} strokeDasharray="2,2" opacity={0.6} />
               )}
+
               {/* Hit area */}
               <circle cx={star.px} cy={star.py} r={Math.max(star.size * 3, 10)}
                 fill="transparent" className="cursor-pointer"
                 onMouseEnter={() => onHoverWord(star.id)}
                 onMouseLeave={() => onHoverWord(null)}
-                onClick={() => onSelectDomain(star.domains[0] === selectedDomain ? null : star.domains[0])}
+                onClick={() => {
+                  if (onStarClick) {
+                    onStarClick(star);
+                  } else {
+                    onSelectDomain(star.domains[0] === selectedDomain ? null : star.domains[0]);
+                  }
+                }}
               />
             </g>
           );
@@ -282,6 +354,11 @@ export default function PublicConstellation({
               style={{ background: (hoveredWordInfo.srcStyle.coreColor || '#7BA3E0') + '20', color: hoveredWordInfo.srcStyle.coreColor || '#7BA3E0' }}>
               {hoveredWordInfo.srcStyle.symbol} {hoveredWordInfo.srcStyle.label}
             </span>
+            {hoveredWordInfo._isExternal && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
+                search result
+              </span>
+            )}
           </div>
           {hoveredWordInfo.domains.length > 1 && (
             <div className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>

@@ -81,14 +81,14 @@ function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Public constellation (fullscreen, no AppShell) */}
+      {/* Constellation as default view (fullscreen, no AppShell) */}
+      <Route path="/" element={<ConstellationPage defaultLanguage="sn" />} />
       <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
       <Route path="/constellation" element={<ConstellationPage />} />
 
       {/* App routes with AppShell layout */}
-      <Route path="/" element={<AppShell />}>
-        {/* Public routes (no auth required) */}
-        <Route index element={<SearchPage />} />
+      <Route element={<AppShell />}>
+        {/* Legacy search (standalone page) */}
         <Route path="search" element={<SearchPage />} />
         <Route path="community" element={<CommunityPage />} />
 

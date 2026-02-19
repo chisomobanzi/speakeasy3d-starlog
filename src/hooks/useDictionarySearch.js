@@ -3,11 +3,11 @@ import { useAppStore } from '../stores/appStore';
 import { useEntries } from './useEntries';
 import { useCommunity } from './useCommunity';
 import { searchSource } from '../lib/adapters';
-import { SOURCES } from '../lib/dictionarySources';
+import { BUILTIN_SOURCE_MAP } from '../lib/builtinSources';
 
 /**
  * Fan-out search hook that queries all enabled dictionary sources in parallel.
- * Replaces useSearch for LookupTab with external dictionary integration.
+ * Uses the unified source registry (via BUILTIN_SOURCE_MAP for sync metadata).
  */
 export function useDictionarySearch() {
   const enabledSources = useAppStore((s) => s.enabledSources);
@@ -32,14 +32,14 @@ export function useDictionarySearch() {
     const language = options.language || null;
     const deckId = options.deckId || null;
 
-    // Determine which sources to query
+    // Determine which sources to query using registry metadata
     const activeSources = enabledSources.filter(sourceId => {
-      const source = SOURCES[sourceId];
+      const source = BUILTIN_SOURCE_MAP.get(sourceId);
       if (!source) return false;
-      // When language is null (all languages), include all sources
+      if (!source.is_searchable) return false;
       if (!language) return true;
-      if (!source.supportedLanguages) return true;
-      return source.supportedLanguages.includes(language);
+      if (!source.supported_languages) return true;
+      return source.supported_languages.includes(language);
     });
 
     // Set all active sources to loading
@@ -49,30 +49,32 @@ export function useDictionarySearch() {
 
     // Fan out to all enabled sources
     const promises = activeSources.map(async (sourceId) => {
+      const sourceMeta = BUILTIN_SOURCE_MAP.get(sourceId);
+      const adapterId = sourceMeta?.adapter_id || sourceId;
       let sourceResults = [];
 
-      if (sourceId === 'personal') {
+      if (adapterId === 'personal') {
         sourceResults = await searchEntries(searchQuery, { deckId, language: options.language, limit: 25 });
         sourceResults = (sourceResults || []).map(r => ({
           ...r,
           source_type: 'personal',
-          _sourceId: 'personal',
-          _sourceMeta: SOURCES.personal,
+          _sourceId: sourceId,
+          _sourceMeta: sourceMeta,
         }));
-      } else if (sourceId === 'community') {
+      } else if (adapterId === 'community') {
         sourceResults = await searchCommunity(searchQuery, { language: options.language, limit: 25 });
         sourceResults = (sourceResults || []).map(r => ({
           ...r,
           source_type: 'community',
-          _sourceId: 'community',
-          _sourceMeta: SOURCES.community,
+          _sourceId: sourceId,
+          _sourceMeta: sourceMeta,
         }));
       } else {
-        sourceResults = await searchSource(sourceId, searchQuery, language, options);
+        sourceResults = await searchSource(adapterId, searchQuery, language, options);
         sourceResults = (sourceResults || []).map(r => ({
           ...r,
           _sourceId: sourceId,
-          _sourceMeta: SOURCES[sourceId],
+          _sourceMeta: sourceMeta,
         }));
       }
 
@@ -117,9 +119,13 @@ export function useDictionarySearch() {
    * Flat sorted array: exact matches first, then personal > community > external
    */
   const combinedResults = useMemo(() => {
-    const sourcePriority = { personal: 0, community: 1 };
+    const sourcePriority = { personal: 0, community_search: 1 };
     const all = Object.entries(results).flatMap(([sourceId, items]) =>
-      (items || []).map(item => ({ ...item, _sourceId: sourceId, _sourceMeta: SOURCES[sourceId] }))
+      (items || []).map(item => ({
+        ...item,
+        _sourceId: sourceId,
+        _sourceMeta: BUILTIN_SOURCE_MAP.get(sourceId),
+      }))
     );
 
     return all.sort((a, b) => {
@@ -141,11 +147,11 @@ export function useDictionarySearch() {
    * Grouped by source for sectioned display
    */
   const groupedResults = useMemo(() => {
-    const sourceOrder = ['personal', 'community', 'freeDictionary', 'wiktionary'];
+    const sourceOrder = ['personal', 'community_search', 'freeDictionary', 'wiktionary'];
     return sourceOrder
       .filter(sid => enabledSources.includes(sid) && results[sid]?.length > 0)
       .map(sid => ({
-        source: SOURCES[sid],
+        source: BUILTIN_SOURCE_MAP.get(sid),
         results: results[sid],
       }));
   }, [results, enabledSources]);
