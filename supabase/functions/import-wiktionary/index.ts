@@ -159,7 +159,7 @@ async function fetchCategoryMembers(
 
 async function fetchDefinition(
   word: string,
-  langName: string,
+  languageCode: string,
 ): Promise<string | null> {
   try {
     const res = await fetch(`${WIKI_REST}/${encodeURIComponent(word)}`, {
@@ -168,7 +168,8 @@ async function fetchDefinition(
     if (!res.ok) return null;
 
     const data = await res.json();
-    const sections = data[langName];
+    // REST API keys sections by language code (e.g. 'es'), not name (e.g. 'Spanish')
+    const sections = data[languageCode];
     if (!sections || !Array.isArray(sections)) return null;
 
     // Get first non-form-of definition
@@ -275,7 +276,7 @@ Deno.serve(async (req) => {
         // Rate limit: ~1 req/sec
         await sleep(1000);
 
-        const translation = await fetchDefinition(title, langName);
+        const translation = await fetchDefinition(title, language_code);
         if (!translation) continue;
 
         // Classify domain

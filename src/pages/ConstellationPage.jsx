@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut } from 'lucide-react';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, Star } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
@@ -68,6 +68,8 @@ export default function ConstellationPage({ defaultLanguage }) {
   const {
     data: supabaseData,
     loading: supabaseLoading,
+    discovering,
+    discoveryProgress,
     pulseMap,
     recentSignals,
     isLive,
@@ -80,10 +82,35 @@ export default function ConstellationPage({ defaultLanguage }) {
     return adaptSeedData(raw);
   }, [languageCode]);
 
+  // Build live discovery data from progress (words stream in as they arrive)
+  const discoveryData = useMemo(() => {
+    if (!discoveryProgress?.words?.length) return null;
+    // Reuse the same SIL domains for any language
+    const domainDefs = [
+      { id: '1', name: 'Universe & Creation', nameLocal: 'Universe', color: '#4ECDC4', icon: '\u{1F30D}', expected: 320, angle: 0 },
+      { id: '2', name: 'Person', nameLocal: 'Person', color: '#FF6B8A', icon: '\u{1F9D1}', expected: 280, angle: 40 },
+      { id: '3', name: 'Language & Thought', nameLocal: 'Mind', color: '#CE93D8', icon: '\u{1F4AD}', expected: 250, angle: 80 },
+      { id: '4', name: 'Social Behavior', nameLocal: 'Social', color: '#FFB347', icon: '\u{1F91D}', expected: 380, angle: 120 },
+      { id: '5', name: 'Daily Life', nameLocal: 'Daily Life', color: '#7ED87E', icon: '\u{1F3E0}', expected: 300, angle: 160 },
+      { id: '6', name: 'Work & Occupation', nameLocal: 'Work', color: '#A5D6A7', icon: '\u{1F528}', expected: 340, angle: 200 },
+      { id: '7', name: 'Physical Actions', nameLocal: 'Actions', color: '#82B1FF', icon: '\u{1F3C3}', expected: 220, angle: 240 },
+      { id: '8', name: 'States', nameLocal: 'States', color: '#FFAB91', icon: '\u{1F522}', expected: 200, angle: 280 },
+      { id: '9', name: 'Grammar', nameLocal: 'Grammar', color: '#B0BEC5', icon: '\u{1F524}', expected: 150, angle: 320 },
+    ];
+    const langNameStr = LANGUAGES.find(l => l.code === languageCode)?.name || languageCode;
+    return {
+      language: { code: languageCode, name: langNameStr },
+      taxonomy: { name: langNameStr, domains: domainDefs },
+      vocabulary: discoveryProgress.words,
+    };
+  }, [discoveryProgress, languageCode]);
+
   const constellationData = useMemo(() => {
     if (supabaseData?.vocabulary?.length > 0) return supabaseData;
-    return staticData;
-  }, [supabaseData, staticData]);
+    if (staticData) return staticData;
+    if (discoveryData) return discoveryData;
+    return null;
+  }, [supabaseData, staticData, discoveryData]);
 
   const handleSelectDomain = useCallback((domainId) => {
     setSelectedDomain(domainId);
@@ -171,7 +198,7 @@ export default function ConstellationPage({ defaultLanguage }) {
 
   if (!languageCode) return <ConstellationHero />;
 
-  if (supabaseLoading && !staticData) {
+  if (supabaseLoading && !staticData && !discoveryData) {
     return <LoadingScreen message="Loading constellation..." />;
   }
 
@@ -237,17 +264,32 @@ export default function ConstellationPage({ defaultLanguage }) {
           />
         )}
 
-        {/* Action buttons */}
-        <div className="absolute bottom-4 left-4 z-20 flex gap-2">
-          <button
-            onClick={() => setShowSuggest(true)}
-            className="px-4 py-2 bg-cyan-600/90 backdrop-blur-sm text-white text-sm rounded-full hover:bg-cyan-500 transition-colors shadow-lg"
-          >+ Suggest Word</button>
-          <button
-            onClick={() => setShowQR(true)}
-            className="px-3 py-2 bg-slate-800/90 backdrop-blur-sm text-slate-300 text-sm rounded-full hover:bg-slate-700 transition-colors shadow-lg"
-          >QR</button>
-        </div>
+        {/* Discovery overlay */}
+        {discovering && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20">
+            <div className="px-5 py-3 rounded-xl backdrop-blur-md flex items-center gap-3"
+              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+              <div>
+                <p className="text-[11px] text-white font-medium">
+                  Discovering {language.name} vocabulary...
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  {discoveryProgress?.words?.length || 0} words found
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating nav */}
+        <FloatingNav
+          user={user}
+          profile={profile}
+          signOut={signOut}
+          onSuggestWord={() => setShowSuggest(true)}
+          onShowQR={() => setShowQR(true)}
+        />
       </div>
 
       {/* Sidebar */}
@@ -266,9 +308,6 @@ export default function ConstellationPage({ defaultLanguage }) {
         onResultClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
         languageCode={languageCode}
         onLanguageChange={setActiveLanguage}
-        user={user}
-        profile={profile}
-        signOut={signOut}
         sourceMap={sourceMap}
         provenanceSources={provenanceSources}
         getSourceStyle={getSourceStyle}
@@ -302,12 +341,80 @@ export default function ConstellationPage({ defaultLanguage }) {
   );
 }
 
+/* ── Floating Nav (left side) ── */
+function FloatingNav({ user, profile, signOut, onSuggestWord, onShowQR }) {
+  const navItems = [
+    { to: '/decks', icon: BookOpen, label: 'Decks' },
+    { to: '/community', icon: Users, label: 'Community' },
+    { action: onSuggestWord, icon: Plus, label: 'Suggest', accent: true },
+    { action: onShowQR, icon: QrCode, label: 'QR Code' },
+    { to: '/settings', icon: Settings, label: 'Settings' },
+  ];
+
+  const authItem = user
+    ? { action: signOut, icon: LogOut, label: profile?.display_name || 'Sign out' }
+    : { to: '/login', icon: LogIn, label: 'Sign in' };
+
+  return (
+    <div
+      className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1.5"
+      style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace" }}
+    >
+      {navItems.map((item, i) => (
+        <FloatingNavItem key={i} {...item} />
+      ))}
+      <div className="h-px my-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
+      <FloatingNavItem {...authItem} />
+    </div>
+  );
+}
+
+function FloatingNavItem({ to, action, icon: Icon, label, accent }) {
+  const baseClass = `
+    group flex items-center gap-2.5 px-2.5 py-2 rounded-lg
+    backdrop-blur-md transition-all duration-200
+    hover:bg-white/[.10]
+  `;
+  const style = {
+    background: accent ? 'rgba(6,182,212,0.15)' : 'rgba(8,10,18,0.75)',
+    border: '1px solid rgba(255,255,255,0.06)',
+  };
+
+  const content = (
+    <>
+      <Icon
+        className="w-4 h-4 shrink-0 transition-colors"
+        style={{ color: accent ? '#22d3ee' : 'rgba(255,255,255,0.5)' }}
+      />
+      <span
+        className="text-[11px] whitespace-nowrap transition-colors group-hover:text-white truncate max-w-[100px]"
+        style={{ color: accent ? '#22d3ee' : 'rgba(255,255,255,0.45)' }}
+      >
+        {label}
+      </span>
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link to={to} className={baseClass} style={style}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={action} className={baseClass} style={style}>
+      {content}
+    </button>
+  );
+}
+
 /* ── Constellation Sidebar ── */
 function ConstellationSidebar({
   taxonomy, vocabulary, allVocabulary, selectedDomain, onSelectDomain,
   search, clearSearch, searchQuery, searchResults, isSearching, sourceLoading,
   onResultClick, languageCode, onLanguageChange,
-  user, profile, signOut,
   sourceMap, provenanceSources, getSourceStyle,
 }) {
   const [localQuery, setLocalQuery] = useState('');
@@ -515,33 +622,8 @@ function ConstellationSidebar({
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="mt-auto shrink-0 p-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <Link to="/decks" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors">
-          <BookOpen className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
-          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>My Decks</span>
-        </Link>
-        <Link to="/settings" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors">
-          <Settings className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
-          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>Settings</span>
-        </Link>
-        {user ? (
-          <button
-            onClick={signOut}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
-            <span className="text-[10px] truncate flex-1 text-left" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              {profile?.display_name || user.email}
-            </span>
-          </button>
-        ) : (
-          <Link to="/login" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[.05] transition-colors">
-            <LogIn className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
-            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>Sign in</span>
-          </Link>
-        )}
-      </div>
+      {/* Attribution footer */}
+      <div className="mt-auto shrink-0" />
     </div>
   );
 }
