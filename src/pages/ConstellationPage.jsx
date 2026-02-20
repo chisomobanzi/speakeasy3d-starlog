@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, Star } from 'lucide-react';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
@@ -287,8 +287,6 @@ export default function ConstellationPage({ defaultLanguage }) {
           user={user}
           profile={profile}
           signOut={signOut}
-          onSuggestWord={() => setShowSuggest(true)}
-          onShowQR={() => setShowQR(true)}
         />
       </div>
 
@@ -311,6 +309,8 @@ export default function ConstellationPage({ defaultLanguage }) {
         sourceMap={sourceMap}
         provenanceSources={provenanceSources}
         getSourceStyle={getSourceStyle}
+        onSuggestWord={() => setShowSuggest(true)}
+        onShowQR={() => setShowQR(true)}
       />
 
       {/* Modals */}
@@ -342,12 +342,12 @@ export default function ConstellationPage({ defaultLanguage }) {
 }
 
 /* ── Floating Nav (left side) ── */
-function FloatingNav({ user, profile, signOut, onSuggestWord, onShowQR }) {
+function FloatingNav({ user, profile, signOut }) {
   const navItems = [
+    { to: '/search', icon: Search, label: 'Search' },
+    { to: '/add', icon: Plus, label: 'Capture', accent: true },
     { to: '/decks', icon: BookOpen, label: 'Decks' },
     { to: '/community', icon: Users, label: 'Community' },
-    { action: onSuggestWord, icon: Plus, label: 'Suggest', accent: true },
-    { action: onShowQR, icon: QrCode, label: 'QR Code' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -416,6 +416,7 @@ function ConstellationSidebar({
   search, clearSearch, searchQuery, searchResults, isSearching, sourceLoading,
   onResultClick, languageCode, onLanguageChange,
   sourceMap, provenanceSources, getSourceStyle,
+  onSuggestWord, onShowQR,
 }) {
   const [localQuery, setLocalQuery] = useState('');
   const debounceRef = useRef(null);
@@ -622,8 +623,25 @@ function ConstellationSidebar({
         </div>
       </div>
 
-      {/* Attribution footer */}
-      <div className="mt-auto shrink-0" />
+      {/* Actions */}
+      <div className="mt-auto shrink-0 p-3 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <button
+          onClick={onSuggestWord}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium transition-colors"
+          style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.2)' }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Suggest Word
+        </button>
+        <button
+          onClick={onShowQR}
+          className="px-3 py-2 rounded-lg transition-colors hover:bg-white/[.06]"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+          title="Share QR code"
+        >
+          <QrCode className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+        </button>
+      </div>
     </div>
   );
 }
