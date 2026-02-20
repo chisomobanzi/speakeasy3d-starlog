@@ -433,7 +433,12 @@ function FloatingNav({ user, profile, signOut, viewMode, setViewMode }) {
   const isDecksActive = viewMode === 'decks' || viewMode === 'deck';
 
   const navItems = [
-    { to: '/search', icon: Search, label: 'Search' },
+    {
+      action: () => { if (viewMode !== 'language') setViewMode('language'); },
+      icon: Search,
+      label: 'Search',
+      active: viewMode === 'language',
+    },
     { to: '/add', icon: Plus, label: 'Capture', accent: true },
     {
       action: () => setViewMode(isDecksActive ? 'language' : 'decks'),
