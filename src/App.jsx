@@ -85,6 +85,7 @@ function AppRoutes() {
       <Route path="/" element={<ConstellationPage defaultLanguage="sn" />} />
       <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
       <Route path="/constellation" element={<ConstellationPage />} />
+      <Route path="/deck/:deckId" element={<ConstellationPage defaultLanguage="sn" />} />
 
       {/* App routes with AppShell layout */}
       <Route element={<AppShell />}>

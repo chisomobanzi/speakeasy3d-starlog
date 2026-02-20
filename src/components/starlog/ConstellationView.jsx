@@ -232,6 +232,7 @@ export default function ConstellationView({
   deckName = "My Deck",
   deckColor = "#06b6d4",
   onSelectEntry,
+  embedded = false,
 }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
@@ -267,7 +268,7 @@ export default function ConstellationView({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-500">
+      <div className={`flex flex-col items-center justify-center ${embedded ? 'h-full' : 'py-16'} text-slate-500`}>
         <div className="w-24 h-24 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">
           <div className="w-8 h-8 rounded-full bg-slate-700" />
         </div>
@@ -276,6 +277,225 @@ export default function ConstellationView({
     );
   }
 
+  const svgContent = (
+    <>
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="0.015" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* Ambient stars */}
+      {[...Array(40)].map((_, i) => (
+        <circle
+          key={`star-${i}`}
+          cx={(seededRandom(i * 37) - 0.5) * 2.2}
+          cy={(seededRandom(i * 73) - 0.5) * 2.2}
+          r={seededRandom(i * 13) * 0.003 + 0.001}
+          fill={`rgba(255, 255, 255, ${seededRandom(i * 91) * 0.2 + 0.05})`}
+        />
+      ))}
+
+      {/* Outer boundary */}
+      <circle
+        cx="0" cy="0" r="0.95"
+        fill={embedded ? "transparent" : "rgba(15, 23, 42, 0.9)"}
+        stroke="rgba(100, 120, 180, 0.2)"
+        strokeWidth="0.008"
+      />
+
+      {/* Ring guides */}
+      {[1, 2, 3, 4, 5, 6].map(ring => (
+        <circle
+          key={`ring-${ring}`}
+          cx="0" cy="0"
+          r={0.12 + (ring - 1) * 0.11}
+          fill="none"
+          stroke="rgba(80, 100, 150, 0.08)"
+          strokeWidth="0.003"
+          strokeDasharray="0.015 0.01"
+        />
+      ))}
+
+      {/* Ornamental connections */}
+      {connections.map((conn, i) => {
+        const { p1, p2, type, opacity } = conn;
+
+        if (type === 'arc') {
+          const r = p1.radius;
+          let angleDiff = p2.angle - p1.angle;
+          if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          if (Math.abs(angleDiff) > 1.5) return null;
+
+          const largeArc = Math.abs(angleDiff) > Math.PI ? 1 : 0;
+          const sweep = angleDiff > 0 ? 1 : 0;
+
+          return (
+            <path
+              key={`conn-${i}`}
+              d={`M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${p2.x} ${p2.y}`}
+              fill="none"
+              stroke={deckColor}
+              strokeWidth="0.005"
+              strokeLinecap="round"
+              opacity={opacity}
+            />
+          );
+        }
+
+        return (
+          <line
+            key={`conn-${i}`}
+            x1={p1.x} y1={p1.y}
+            x2={p2.x} y2={p2.y}
+            stroke={deckColor}
+            strokeWidth="0.004"
+            strokeLinecap="round"
+            opacity={opacity}
+          />
+        );
+      })}
+
+      {/* Word nodes */}
+      {points.map((point) => {
+        const { srsVisuals } = point;
+        const isHovered = hoveredPoint === point.id;
+        const size = 0.022 * srsVisuals.size;
+        const color = getNodeColor(point);
+
+        return (
+          <g key={`node-${point.id}`}>
+            {srsVisuals.glow && (
+              <circle
+                cx={point.x} cy={point.y}
+                r={size * 2.5}
+                fill={color}
+                opacity={srsVisuals.brightness * 0.2}
+                filter="url(#glow)"
+              />
+            )}
+            {srsVisuals.pulse && (
+              <circle
+                cx={point.x} cy={point.y}
+                r={size * 2}
+                fill="none"
+                stroke={color}
+                strokeWidth="0.004"
+                opacity={srsVisuals.brightness * 0.5}
+              >
+                <animate
+                  attributeName="r"
+                  values={`${size * 1.5};${size * 2.5};${size * 1.5}`}
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values={`${srsVisuals.brightness * 0.5};${srsVisuals.brightness * 0.1};${srsVisuals.brightness * 0.5}`}
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+            )}
+            <circle
+              cx={point.x} cy={point.y}
+              r={isHovered ? size * 1.5 : size}
+              fill={color}
+              opacity={srsVisuals.brightness}
+              className="cursor-pointer transition-all duration-150"
+              onMouseEnter={() => setHoveredPoint(point.id)}
+              onMouseLeave={() => setHoveredPoint(null)}
+              onClick={() => onSelectEntry?.(point)}
+            />
+            {srsVisuals.coreWhite && (
+              <circle
+                cx={point.x} cy={point.y}
+                r={size * 0.4}
+                fill="white"
+                opacity={srsVisuals.brightness * 0.9}
+              />
+            )}
+          </g>
+        );
+      })}
+
+      {/* Central orb */}
+      <g filter="url(#glow)">
+        <circle cx="0" cy="0" r="0.07" fill={deckColor} opacity="0.3" />
+        <circle cx="0" cy="0" r="0.045" fill="white" opacity={0.6 + stats.avgMastery * 0.4} />
+        <circle cx="0" cy="0" r="0.02" fill="white" opacity="0.95" />
+      </g>
+
+      {/* Labels */}
+      <text
+        x="0" y="0.88"
+        textAnchor="middle"
+        fill="white"
+        fontSize="0.055"
+        fontWeight="bold"
+        fontFamily="system-ui, sans-serif"
+      >
+        {deckName}
+      </text>
+      <text
+        x="0" y="0.95"
+        textAnchor="middle"
+        fill="rgba(150, 150, 180, 0.7)"
+        fontSize="0.032"
+        fontFamily="system-ui, sans-serif"
+      >
+        {entries.length} words
+      </text>
+    </>
+  );
+
+  // Embedded mode: fill parent, transparent bg, absolute tooltip
+  if (embedded) {
+    return (
+      <div className="w-full h-full relative">
+        <svg
+          viewBox="-1.1 -1.1 2.2 2.2"
+          className="w-full h-full"
+          style={{ background: 'transparent' }}
+        >
+          {svgContent}
+        </svg>
+
+        {/* Hover tooltip */}
+        {hovered && (
+          <div
+            className="absolute top-4 left-1/2 -translate-x-1/2 rounded-xl p-4 border shadow-2xl z-10 min-w-[200px]"
+            style={{
+              background: 'rgba(8,10,18,0.92)',
+              backdropFilter: 'blur(12px)',
+              borderColor: 'rgba(255,255,255,0.1)',
+              fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
+            }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: getNodeColor(hovered) }}
+              />
+              <span className="text-xl font-bold text-white">{hovered.word}</span>
+            </div>
+            <p className="text-cyan-400 mb-2">{hovered.translation}</p>
+            <div className="flex gap-4 text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <span>Mastery: {Math.round((hovered.mastery_level || 0) * 100)}%</span>
+              <span className="capitalize">{hovered.visualState.replace(/([A-Z])/g, ' $1')}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default (non-embedded) mode
   return (
     <div className="px-4 py-4 space-y-4">
       {/* Constellation SVG */}
@@ -285,185 +505,7 @@ export default function ConstellationView({
           className="w-full aspect-square rounded-2xl"
           style={{ background: 'radial-gradient(ellipse at center, #0f172a 0%, #020617 100%)' }}
         >
-          <defs>
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="0.015" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Ambient stars */}
-          {[...Array(40)].map((_, i) => (
-            <circle
-              key={`star-${i}`}
-              cx={(seededRandom(i * 37) - 0.5) * 2.2}
-              cy={(seededRandom(i * 73) - 0.5) * 2.2}
-              r={seededRandom(i * 13) * 0.003 + 0.001}
-              fill={`rgba(255, 255, 255, ${seededRandom(i * 91) * 0.2 + 0.05})`}
-            />
-          ))}
-
-          {/* Outer boundary */}
-          <circle
-            cx="0" cy="0" r="0.95"
-            fill="rgba(15, 23, 42, 0.9)"
-            stroke="rgba(100, 120, 180, 0.2)"
-            strokeWidth="0.008"
-          />
-
-          {/* Ring guides */}
-          {[1, 2, 3, 4, 5, 6].map(ring => (
-            <circle
-              key={`ring-${ring}`}
-              cx="0" cy="0"
-              r={0.12 + (ring - 1) * 0.11}
-              fill="none"
-              stroke="rgba(80, 100, 150, 0.08)"
-              strokeWidth="0.003"
-              strokeDasharray="0.015 0.01"
-            />
-          ))}
-
-          {/* Ornamental connections */}
-          {connections.map((conn, i) => {
-            const { p1, p2, type, opacity } = conn;
-
-            if (type === 'arc') {
-              const r = p1.radius;
-              let angleDiff = p2.angle - p1.angle;
-              if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-              if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-              if (Math.abs(angleDiff) > 1.5) return null;
-
-              const largeArc = Math.abs(angleDiff) > Math.PI ? 1 : 0;
-              const sweep = angleDiff > 0 ? 1 : 0;
-
-              return (
-                <path
-                  key={`conn-${i}`}
-                  d={`M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${p2.x} ${p2.y}`}
-                  fill="none"
-                  stroke={deckColor}
-                  strokeWidth="0.005"
-                  strokeLinecap="round"
-                  opacity={opacity}
-                />
-              );
-            }
-
-            return (
-              <line
-                key={`conn-${i}`}
-                x1={p1.x} y1={p1.y}
-                x2={p2.x} y2={p2.y}
-                stroke={deckColor}
-                strokeWidth="0.004"
-                strokeLinecap="round"
-                opacity={opacity}
-              />
-            );
-          })}
-
-          {/* Word nodes */}
-          {points.map((point) => {
-            const { srsVisuals } = point;
-            const isHovered = hoveredPoint === point.id;
-            const size = 0.022 * srsVisuals.size;
-            const color = getNodeColor(point);
-
-            return (
-              <g key={`node-${point.id}`}>
-                {/* Outer glow */}
-                {srsVisuals.glow && (
-                  <circle
-                    cx={point.x} cy={point.y}
-                    r={size * 2.5}
-                    fill={color}
-                    opacity={srsVisuals.brightness * 0.2}
-                    filter="url(#glow)"
-                  />
-                )}
-
-                {/* Pulse ring (review due) */}
-                {srsVisuals.pulse && (
-                  <circle
-                    cx={point.x} cy={point.y}
-                    r={size * 2}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="0.004"
-                    opacity={srsVisuals.brightness * 0.5}
-                  >
-                    <animate
-                      attributeName="r"
-                      values={`${size * 1.5};${size * 2.5};${size * 1.5}`}
-                      dur="2s"
-                      repeatCount="indefinite"
-                    />
-                    <animate
-                      attributeName="opacity"
-                      values={`${srsVisuals.brightness * 0.5};${srsVisuals.brightness * 0.1};${srsVisuals.brightness * 0.5}`}
-                      dur="2s"
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                )}
-
-                {/* Main node */}
-                <circle
-                  cx={point.x} cy={point.y}
-                  r={isHovered ? size * 1.5 : size}
-                  fill={color}
-                  opacity={srsVisuals.brightness}
-                  className="cursor-pointer transition-all duration-150"
-                  onMouseEnter={() => setHoveredPoint(point.id)}
-                  onMouseLeave={() => setHoveredPoint(null)}
-                  onClick={() => onSelectEntry?.(point)}
-                />
-
-                {/* White core (mastered) */}
-                {srsVisuals.coreWhite && (
-                  <circle
-                    cx={point.x} cy={point.y}
-                    r={size * 0.4}
-                    fill="white"
-                    opacity={srsVisuals.brightness * 0.9}
-                  />
-                )}
-              </g>
-            );
-          })}
-
-          {/* Central orb */}
-          <g filter="url(#glow)">
-            <circle cx="0" cy="0" r="0.07" fill={deckColor} opacity="0.3" />
-            <circle cx="0" cy="0" r="0.045" fill="white" opacity={0.6 + stats.avgMastery * 0.4} />
-            <circle cx="0" cy="0" r="0.02" fill="white" opacity="0.95" />
-          </g>
-
-          {/* Labels */}
-          <text
-            x="0" y="0.88"
-            textAnchor="middle"
-            fill="white"
-            fontSize="0.055"
-            fontWeight="bold"
-            fontFamily="system-ui, sans-serif"
-          >
-            {deckName}
-          </text>
-          <text
-            x="0" y="0.95"
-            textAnchor="middle"
-            fill="rgba(150, 150, 180, 0.7)"
-            fontSize="0.032"
-            fontFamily="system-ui, sans-serif"
-          >
-            {entries.length} words
-          </text>
+          {svgContent}
         </svg>
 
         {/* Hover tooltip */}

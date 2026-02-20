@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
+import ConstellationView from '../components/starlog/ConstellationView';
 import StarsCanvas from '../components/starlog/StarsCanvas';
 import ConstellationHero from '../components/starlog/ConstellationHero';
 import SuggestWordModal from '../components/starlog/SuggestWordModal';
@@ -11,6 +12,8 @@ import ConstellationQR from '../components/starlog/ConstellationQR';
 import WordDetailModal from '../components/starlog/WordDetailModal';
 import AddToDeckModal from '../components/starlog/AddToDeckModal';
 import SourceSelector from '../components/starlog/SourceSelector';
+import Modal from '../components/ui/Modal';
+import { ConfirmDialog } from '../components/ui/Modal';
 import { adaptSeedData } from '../lib/constellation-adapter';
 import { useConstellation } from '../hooks/useConstellation';
 import { useConstellationSearch } from '../hooks/useConstellationSearch';
@@ -19,16 +22,31 @@ import { useEntries } from '../hooks/useEntries';
 import { useDecks } from '../hooks/useDecks';
 import { useToast } from '../components/ui/Toast';
 import { useAppStore } from '../stores/appStore';
+import { getReviewStats } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
 import seedData from '../data/shona-seed-data.json';
 
 const SEED_DATA_MAP = { sn: seedData };
 
 export default function ConstellationPage({ defaultLanguage }) {
-  const { languageCode: urlLanguageCode } = useParams();
+  const { languageCode: urlLanguageCode, deckId: urlDeckId } = useParams();
+  const navigate = useNavigate();
   const activeLanguage = useAppStore((s) => s.activeLanguage);
   const setActiveLanguage = useAppStore((s) => s.setActiveLanguage);
   const languageCode = urlLanguageCode || activeLanguage || defaultLanguage || 'sn';
+
+  // View mode: 'language' | 'decks' | 'deck'
+  const [viewMode, setViewMode] = useState(urlDeckId ? 'deck' : 'language');
+  const [activeDeckId, setActiveDeckId] = useState(urlDeckId || null);
+  const [activeDeck, setActiveDeck] = useState(null);
+
+  // Sync URL deckId to state
+  useEffect(() => {
+    if (urlDeckId) {
+      setViewMode('deck');
+      setActiveDeckId(urlDeckId);
+    }
+  }, [urlDeckId]);
 
   // Sync URL param back to store so it persists
   useEffect(() => {
@@ -56,8 +74,30 @@ export default function ConstellationPage({ defaultLanguage }) {
 
   const { user, profile, signOut } = useAuth();
   const { createEntry } = useEntries();
-  const { fetchDecks } = useDecks();
+  const { decks, loading: decksLoading, fetchDecks, getDeck, createDeck, deleteDeck: deleteDeckFn } = useDecks();
+  const { entries: deckEntries, loading: entriesLoading, fetchEntries } = useEntries(activeDeckId);
   const toast = useToast();
+
+  // Load decks when entering decks or deck mode
+  useEffect(() => {
+    if (viewMode === 'decks' || viewMode === 'deck') {
+      fetchDecks();
+    }
+  }, [viewMode, fetchDecks]);
+
+  // Load deck + entries when activeDeckId changes
+  useEffect(() => {
+    if (activeDeckId) {
+      getDeck(activeDeckId).then(d => { if (d) setActiveDeck(d); });
+      fetchEntries(activeDeckId);
+    }
+  }, [activeDeckId, getDeck, fetchEntries]);
+
+  // Deck entry click handler
+  const handleDeckEntryClick = useCallback((point) => {
+    setDetailEntry(point);
+    setShowDetailModal(true);
+  }, []);
 
   // Source registry
   const { sourceMap, provenanceSources, getSourceStyle } = useSourceRegistry(languageCode);
@@ -215,47 +255,59 @@ export default function ConstellationPage({ defaultLanguage }) {
 
       {/* Viz area */}
       <div className="flex-1 relative flex items-center justify-center">
-        <PublicConstellation
-          language={language}
-          taxonomy={taxonomy}
-          vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
-          selectedDomain={selectedDomain}
-          hoveredWord={hoveredWord}
-          pulseMap={pulseMap}
-          isLive={isLive}
-          recentSignals={recentSignals}
-          colorMode={colorMode}
-          showConnections={showConnections}
-          onHoverWord={setHoveredWord}
-          onSelectDomain={handleSelectDomain}
-          highlightedIds={searchActive ? highlightedIds : null}
-          searchActive={searchActive}
-          onStarClick={handleStarClick}
-          sourceMap={sourceMap}
-        />
+        {viewMode === 'deck' && activeDeckId ? (
+          <ConstellationView
+            entries={deckEntries}
+            deckName={activeDeck?.name || 'Loading...'}
+            deckColor={activeDeck?.color || '#06b6d4'}
+            onSelectEntry={handleDeckEntryClick}
+            embedded
+          />
+        ) : (
+          <PublicConstellation
+            language={language}
+            taxonomy={taxonomy}
+            vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
+            selectedDomain={selectedDomain}
+            hoveredWord={hoveredWord}
+            pulseMap={pulseMap}
+            isLive={isLive}
+            recentSignals={recentSignals}
+            colorMode={colorMode}
+            showConnections={showConnections}
+            onHoverWord={setHoveredWord}
+            onSelectDomain={handleSelectDomain}
+            highlightedIds={searchActive ? highlightedIds : null}
+            searchActive={searchActive}
+            onStarClick={handleStarClick}
+            sourceMap={sourceMap}
+          />
+        )}
 
-        {/* Title bar with controls */}
-        <div className="absolute top-3 right-3 z-10 flex gap-2">
-          <button
-            className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${colorMode === 'domain' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
-            onClick={() => setColorMode('domain')}
-          >Color: Domain</button>
-          <button
-            className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${colorMode === 'source' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
-            onClick={() => setColorMode('source')}
-          >Color: Source</button>
-          <button
-            className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${showConnections ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[.04] text-white/40'}`}
-            onClick={() => setShowConnections(v => !v)}
-          >Links</button>
-          <button
-            className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${showStars ? 'bg-pink-500/15 text-pink-400' : 'bg-white/[.04] text-white/40'}`}
-            onClick={() => setShowStars(v => !v)}
-          >Stars</button>
-        </div>
+        {/* Title bar with controls (language mode only) */}
+        {viewMode !== 'deck' && (
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            <button
+              className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${colorMode === 'domain' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setColorMode('domain')}
+            >Color: Domain</button>
+            <button
+              className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${colorMode === 'source' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setColorMode('source')}
+            >Color: Source</button>
+            <button
+              className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${showConnections ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setShowConnections(v => !v)}
+            >Links</button>
+            <button
+              className={`px-2.5 py-1 rounded text-[9px] tracking-wider uppercase transition-all ${showStars ? 'bg-pink-500/15 text-pink-400' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setShowStars(v => !v)}
+            >Stars</button>
+          </div>
+        )}
 
         {/* Word list popup when domain is selected */}
-        {selectedDomain && (
+        {viewMode !== 'deck' && selectedDomain && (
           <WordListPopup
             domain={taxonomy.domains.find(d => d.id === selectedDomain)}
             vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
@@ -265,7 +317,7 @@ export default function ConstellationPage({ defaultLanguage }) {
         )}
 
         {/* Discovery overlay */}
-        {discovering && (
+        {discovering && viewMode !== 'deck' && (
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20">
             <div className="px-5 py-3 rounded-xl backdrop-blur-md flex items-center gap-3"
               style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -287,31 +339,66 @@ export default function ConstellationPage({ defaultLanguage }) {
           user={user}
           profile={profile}
           signOut={signOut}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
         />
       </div>
 
-      {/* Sidebar */}
-      <ConstellationSidebar
-        taxonomy={taxonomy}
-        vocabulary={baseVocabulary}
-        allVocabulary={allVocabulary}
-        selectedDomain={selectedDomain}
-        onSelectDomain={handleSelectDomain}
-        search={search}
-        clearSearch={clearSearch}
-        searchQuery={searchQuery}
-        searchResults={searchResults}
-        isSearching={isSearching}
-        sourceLoading={sourceLoading}
-        onResultClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
-        languageCode={languageCode}
-        onLanguageChange={setActiveLanguage}
-        sourceMap={sourceMap}
-        provenanceSources={provenanceSources}
-        getSourceStyle={getSourceStyle}
-        onSuggestWord={() => setShowSuggest(true)}
-        onShowQR={() => setShowQR(true)}
-      />
+      {/* Sidebar — switches based on viewMode */}
+      {viewMode === 'decks' ? (
+        <DeckListSidebar
+          decks={decks}
+          loading={decksLoading}
+          onSelectDeck={(deck) => {
+            setActiveDeckId(deck.id);
+            setActiveDeck(deck);
+            setViewMode('deck');
+            navigate(`/deck/${deck.id}`);
+          }}
+          onBack={() => setViewMode('language')}
+          createDeck={createDeck}
+          deleteDeck={deleteDeckFn}
+          toast={toast}
+        />
+      ) : viewMode === 'deck' && activeDeckId ? (
+        <DeckDetailSidebar
+          deck={activeDeck}
+          entries={deckEntries}
+          loading={entriesLoading}
+          onBack={() => {
+            setViewMode('decks');
+            setActiveDeckId(null);
+            setActiveDeck(null);
+            navigate('/');
+          }}
+          onEntryClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
+          deleteDeck={deleteDeckFn}
+          toast={toast}
+          navigate={navigate}
+        />
+      ) : (
+        <ConstellationSidebar
+          taxonomy={taxonomy}
+          vocabulary={baseVocabulary}
+          allVocabulary={allVocabulary}
+          selectedDomain={selectedDomain}
+          onSelectDomain={handleSelectDomain}
+          search={search}
+          clearSearch={clearSearch}
+          searchQuery={searchQuery}
+          searchResults={searchResults}
+          isSearching={isSearching}
+          sourceLoading={sourceLoading}
+          onResultClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
+          languageCode={languageCode}
+          onLanguageChange={setActiveLanguage}
+          sourceMap={sourceMap}
+          provenanceSources={provenanceSources}
+          getSourceStyle={getSourceStyle}
+          onSuggestWord={() => setShowSuggest(true)}
+          onShowQR={() => setShowQR(true)}
+        />
+      )}
 
       {/* Modals */}
       <SuggestWordModal
@@ -342,11 +429,18 @@ export default function ConstellationPage({ defaultLanguage }) {
 }
 
 /* ── Floating Nav (left side) ── */
-function FloatingNav({ user, profile, signOut }) {
+function FloatingNav({ user, profile, signOut, viewMode, setViewMode }) {
+  const isDecksActive = viewMode === 'decks' || viewMode === 'deck';
+
   const navItems = [
     { to: '/search', icon: Search, label: 'Search' },
     { to: '/add', icon: Plus, label: 'Capture', accent: true },
-    { to: '/decks', icon: BookOpen, label: 'Decks' },
+    {
+      action: () => setViewMode(isDecksActive ? 'language' : 'decks'),
+      icon: BookOpen,
+      label: 'Decks',
+      active: isDecksActive,
+    },
     { to: '/community', icon: Users, label: 'Community' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
@@ -369,26 +463,30 @@ function FloatingNav({ user, profile, signOut }) {
   );
 }
 
-function FloatingNavItem({ to, action, icon: Icon, label, accent }) {
+function FloatingNavItem({ to, action, icon: Icon, label, accent, active }) {
   const baseClass = `
     group flex items-center gap-2.5 px-2.5 py-2 rounded-lg
     backdrop-blur-md transition-all duration-200
     hover:bg-white/[.10]
   `;
+  const isHighlighted = accent || active;
   const style = {
-    background: accent ? 'rgba(6,182,212,0.15)' : 'rgba(8,10,18,0.75)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    background: active ? 'rgba(139,92,246,0.18)' : accent ? 'rgba(6,182,212,0.15)' : 'rgba(8,10,18,0.75)',
+    border: active ? '1px solid rgba(139,92,246,0.3)' : '1px solid rgba(255,255,255,0.06)',
   };
+
+  const iconColor = active ? '#a78bfa' : accent ? '#22d3ee' : 'rgba(255,255,255,0.5)';
+  const textColor = active ? '#a78bfa' : accent ? '#22d3ee' : 'rgba(255,255,255,0.45)';
 
   const content = (
     <>
       <Icon
         className="w-4 h-4 shrink-0 transition-colors"
-        style={{ color: accent ? '#22d3ee' : 'rgba(255,255,255,0.5)' }}
+        style={{ color: iconColor }}
       />
       <span
         className="text-[11px] whitespace-nowrap transition-colors group-hover:text-white truncate max-w-[100px]"
-        style={{ color: accent ? '#22d3ee' : 'rgba(255,255,255,0.45)' }}
+        style={{ color: textColor }}
       >
         {label}
       </span>
@@ -774,6 +872,384 @@ function WordListPopup({ domain, vocabulary, selectedDomain, sourceMap }) {
           ))}
         </>
       )}
+    </div>
+  );
+}
+
+/* ── Deck List Sidebar ── */
+function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, deleteDeck, toast }) {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedDeck, setSelectedDeck] = useState(null);
+  const [formData, setFormData] = useState({ name: '', description: '', target_language: '', color: '#10b981' });
+  const [saving, setSaving] = useState(false);
+
+  const colorOptions = ['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308'];
+
+  const resetForm = () => setFormData({ name: '', description: '', target_language: '', color: '#10b981' });
+
+  const handleCreate = async () => {
+    if (!formData.name.trim() || !formData.target_language.trim()) {
+      toast.error('Name and language are required');
+      return;
+    }
+    setSaving(true);
+    const { error } = await createDeck({
+      name: formData.name.trim(),
+      description: formData.description.trim() || null,
+      target_language: formData.target_language.trim().toLowerCase(),
+      color: formData.color,
+    });
+    setSaving(false);
+    if (error) { toast.error('Failed to create deck'); }
+    else { toast.success('Deck created!'); setShowCreateModal(false); resetForm(); }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedDeck) return;
+    setSaving(true);
+    const { error } = await deleteDeck(selectedDeck.id);
+    setSaving(false);
+    if (error) { toast.error('Failed to delete deck'); }
+    else { toast.success('Deck deleted'); setShowDeleteConfirm(false); setSelectedDeck(null); }
+  };
+
+  return (
+    <div className="w-[270px] shrink-0 overflow-y-auto border-l flex flex-col"
+      style={{
+        background: 'rgba(8,10,18,0.92)',
+        borderColor: 'rgba(255,255,255,0.06)',
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
+      }}>
+      <div className="p-3 flex flex-col gap-2.5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Language View
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold text-white">My Decks</h3>
+          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{decks.length}</span>
+        </div>
+      </div>
+
+      {/* Deck list */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'rgba(255,255,255,0.3)' }} />
+          </div>
+        ) : decks.length === 0 ? (
+          <div className="text-center py-8">
+            <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.15)' }} />
+            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No decks yet</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {decks.map(deck => (
+              <div
+                key={deck.id}
+                className="group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all hover:bg-white/[.05] border border-transparent hover:border-white/[.08]"
+                onClick={() => onSelectDeck(deck)}
+              >
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: deck.color || '#10b981' }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-medium text-white truncate">{deck.name}</div>
+                  {deck.description && (
+                    <div className="text-[9px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{deck.description}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{deck.word_count || 0}</span>
+                  <span className="text-[8px] px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                    {deck.target_language?.toUpperCase()}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedDeck(deck); setShowDeleteConfirm(true); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-red-400"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Create button */}
+      <div className="mt-auto shrink-0 p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium transition-colors"
+          style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.2)' }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          New Deck
+        </button>
+      </div>
+
+      {/* Create Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => { setShowCreateModal(false); resetForm(); }}
+        title="Create New Deck"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => { setShowCreateModal(false); resetForm(); }}
+              className="px-3 py-1.5 rounded text-[11px] text-slate-400 hover:text-white transition-colors">
+              Cancel
+            </button>
+            <button onClick={handleCreate} disabled={saving}
+              className="px-3 py-1.5 rounded text-[11px] font-medium transition-colors"
+              style={{ background: 'rgba(6,182,212,0.2)', color: '#22d3ee' }}>
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">Name *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
+              placeholder="e.g., Portuguese Basics"
+              className="w-full h-8 px-2 rounded text-[12px] bg-slate-800 text-white border border-slate-700 focus:border-cyan-500/40 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">Language Code *</label>
+            <input
+              type="text"
+              value={formData.target_language}
+              onChange={(e) => setFormData(p => ({ ...p, target_language: e.target.value }))}
+              placeholder="e.g., pt, sn, ami"
+              className="w-full h-8 px-2 rounded text-[12px] bg-slate-800 text-white border border-slate-700 focus:border-cyan-500/40 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">Description</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+              placeholder="Optional description"
+              className="w-full h-8 px-2 rounded text-[12px] bg-slate-800 text-white border border-slate-700 focus:border-cyan-500/40 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">Color</label>
+            <div className="flex gap-1.5">
+              {colorOptions.map(color => (
+                <button key={color} type="button"
+                  onClick={() => setFormData(p => ({ ...p, color }))}
+                  className={`w-6 h-6 rounded-full transition-transform ${formData.color === color ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-900 scale-110' : ''}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setSelectedDeck(null); }}
+        onConfirm={handleDelete}
+        title="Delete Deck"
+        message={`Delete "${selectedDeck?.name}"? All entries will be lost.`}
+        confirmText="Delete"
+        loading={saving}
+      />
+    </div>
+  );
+}
+
+/* ── Deck Detail Sidebar ── */
+function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, deleteDeck, toast, navigate }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const stats = useMemo(() => getReviewStats(entries), [entries]);
+
+  const filteredEntries = useMemo(() => {
+    if (!searchQuery) return entries;
+    const q = searchQuery.toLowerCase();
+    return entries.filter(e =>
+      e.word?.toLowerCase().includes(q) ||
+      e.translation?.toLowerCase().includes(q) ||
+      e.phonetic?.toLowerCase().includes(q)
+    );
+  }, [entries, searchQuery]);
+
+  const handleDelete = async () => {
+    if (!deck) return;
+    setDeleting(true);
+    const { error } = await deleteDeck(deck.id);
+    setDeleting(false);
+    if (error) { toast.error('Failed to delete deck'); }
+    else { toast.success('Deck deleted'); setShowDeleteConfirm(false); onBack(); }
+  };
+
+  const masteryColor = (level) => {
+    if (level >= 0.8) return '#4ade80';
+    if (level >= 0.4) return '#facc15';
+    return 'rgba(255,255,255,0.25)';
+  };
+
+  return (
+    <div className="w-[270px] shrink-0 overflow-y-auto border-l flex flex-col"
+      style={{
+        background: 'rgba(8,10,18,0.92)',
+        borderColor: 'rgba(255,255,255,0.06)',
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
+      }}>
+      <div className="p-3 flex flex-col gap-2.5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            All Decks
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-1 rounded transition-colors hover:bg-red-500/10"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+            title="Delete deck"
+          >
+            <Trash2 className="w-3.5 h-3.5 hover:text-red-400" />
+          </button>
+        </div>
+
+        {/* Deck name */}
+        <div className="flex items-center gap-2">
+          {deck && <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: deck.color || '#10b981' }} />}
+          <h3 className="text-[13px] font-semibold text-white truncate">{deck?.name || 'Loading...'}</h3>
+          {deck?.target_language && (
+            <span className="text-[8px] px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+              {deck.target_language.toUpperCase()}
+            </span>
+          )}
+        </div>
+
+        {/* SRS Stats */}
+        {entries.length > 0 && (
+          <div className="grid grid-cols-4 gap-1.5">
+            <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <div className="text-[13px] font-bold text-white">{stats.new + stats.pending}</div>
+              <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.35)' }}>New</div>
+            </div>
+            <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <div className="text-[13px] font-bold text-yellow-400">{stats.due}</div>
+              <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Due</div>
+            </div>
+            <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <div className="text-[13px] font-bold text-green-400">{stats.mastered}</div>
+              <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Done</div>
+            </div>
+            <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <div className="text-[13px] font-bold text-cyan-400">{Math.round(stats.averageMastery * 100)}%</div>
+              <div className="text-[8px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Mastery</div>
+            </div>
+          </div>
+        )}
+
+        {/* Search */}
+        {entries.length > 0 && (
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter entries..."
+              className="w-full h-8 pl-7 pr-7 rounded text-[12px] bg-white/[.06] text-white placeholder:text-white/30 border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+              style={{ fontFamily: "'JetBrains Mono', monospace" }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                <X className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Entry list */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'rgba(255,255,255,0.3)' }} />
+          </div>
+        ) : filteredEntries.length === 0 && !searchQuery ? (
+          <div className="text-center py-8">
+            <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.15)' }} />
+            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No words yet</p>
+            <p className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>Add words from the language constellation</p>
+          </div>
+        ) : filteredEntries.length === 0 && searchQuery ? (
+          <div className="text-center py-6">
+            <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No matches for &ldquo;{searchQuery}&rdquo;</p>
+          </div>
+        ) : (
+          <div className="space-y-0.5">
+            {searchQuery && (
+              <div className="text-[9px] mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {filteredEntries.length} of {entries.length} entries
+              </div>
+            )}
+            {filteredEntries.map(entry => (
+              <button
+                key={entry.id}
+                onClick={() => onEntryClick(entry)}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-white/[.05] transition-colors"
+              >
+                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: masteryColor(entry.mastery_level || 0) }} />
+                <span className="text-[11px] text-white font-medium truncate flex-1">{entry.word}</span>
+                <span className="text-[9px] truncate max-w-[80px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{entry.translation}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="mt-auto shrink-0 p-3 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <Link to="/add" className="flex-1">
+          <button className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium transition-colors"
+            style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.2)' }}>
+            <Plus className="w-3.5 h-3.5" />
+            Add Word
+          </button>
+        </Link>
+        <Link to={`/import?deck=${deck?.id || ''}`}>
+          <button className="px-3 py-2 rounded-lg transition-colors hover:bg-white/[.06]"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+            title="Import words">
+            <Upload className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+          </button>
+        </Link>
+      </div>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Deck"
+        message={`Delete "${deck?.name}"? All ${entries.length} entries will be lost.`}
+        confirmText="Delete"
+        loading={deleting}
+      />
     </div>
   );
 }
