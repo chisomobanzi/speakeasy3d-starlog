@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload, LayoutList, Table2, Volume2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload, LayoutList, Table2, Volume2, Loader2, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDecks } from '../hooks/useDecks';
 import { useEntries } from '../hooks/useEntries';
@@ -14,8 +14,9 @@ import DeckSpreadsheet from '../components/starlog/DeckSpreadsheet';
 import { EntryCardSkeleton } from '../components/ui/LoadingSpinner';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/Modal';
-import { getReviewStats } from '../lib/srs';
+import { getReviewStats, getDueEntries, sortByPriority } from '../lib/srs';
 import { generateTTS, generateDeckTTS } from '../lib/tts';
+import ReviewMode from '../components/starlog/ReviewMode';
 
 export default function DeckDetailPage() {
   const { deckId } = useParams();
@@ -33,6 +34,8 @@ export default function DeckDetailPage() {
   const [ttsLoadingId, setTtsLoadingId] = useState(null);
   const [ttsBulkProgress, setTtsBulkProgress] = useState(null);
   const [ttsBulkRunning, setTtsBulkRunning] = useState(false);
+  const [reviewMode, setReviewMode] = useState(null); // 'due' | 'all' | null
+  const [reviewEntries, setReviewEntries] = useState([]);
 
   useEffect(() => {
     loadDeck();
@@ -108,6 +111,27 @@ export default function DeckDetailPage() {
   };
 
   const missingAudioCount = entries.filter(e => !e.audio_url).length;
+
+  // Due entries for review
+  const dueEntries = useMemo(() => sortByPriority(getDueEntries(entries)), [entries]);
+
+  const handleStartReview = () => {
+    if (dueEntries.length === 0) return;
+    setReviewEntries(dueEntries);
+    setReviewMode('due');
+  };
+
+  const handleStudyAll = () => {
+    const shuffled = [...entries].sort(() => Math.random() - 0.5);
+    setReviewEntries(shuffled);
+    setReviewMode('all');
+  };
+
+  const handleReviewComplete = () => {
+    setReviewMode(null);
+    setReviewEntries([]);
+    fetchEntries();
+  };
 
   // Filter entries by search
   const filteredEntries = useMemo(() => {
@@ -192,6 +216,16 @@ export default function DeckDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {dueEntries.length > 0 && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleStartReview}
+            >
+              <Zap className="w-4 h-4" />
+              Review ({dueEntries.length})
+            </Button>
+          )}
           {missingAudioCount > 0 && (
             <Button
               variant="ghost"
@@ -270,6 +304,27 @@ export default function DeckDetailPage() {
 
           {/* Words list */}
           <div className="px-4 py-4 lg:px-0 space-y-4">
+            {/* Review buttons */}
+            {entries.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="primary"
+                  onClick={handleStartReview}
+                  disabled={dueEntries.length === 0}
+                  className="flex-1"
+                >
+                  <Zap className="w-4 h-4" />
+                  Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleStudyAll}
+                >
+                  Study All
+                </Button>
+              </div>
+            )}
+
             {/* Progress stats */}
             {entries.length > 0 && (
               <div className="grid grid-cols-4 gap-3">
@@ -376,6 +431,16 @@ export default function DeckDetailPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Review Mode */}
+      {reviewMode && reviewEntries.length > 0 && (
+        <ReviewMode
+          entries={reviewEntries}
+          onComplete={handleReviewComplete}
+          onUpdateEntry={(id, data) => updateEntry(id, data)}
+          onClose={() => { setReviewMode(null); setReviewEntries([]); }}
+        />
       )}
 
       {/* Delete confirmation */}

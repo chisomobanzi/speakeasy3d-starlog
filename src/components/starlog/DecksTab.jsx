@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, BookOpen, Upload, Volume2, Loader2 } from 'lucide-react';
 import { useDecks } from '../../hooks/useDecks';
 import { supabase } from '../../lib/supabase';
 import { generateDeckTTS } from '../../lib/tts';
+import { getDueEntries, sortByPriority } from '../../lib/srs';
 import DeckCard from './DeckCard';
+import ReviewMode from './ReviewMode';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import Input, { Textarea } from '../ui/Input';
@@ -30,9 +32,35 @@ export default function DecksTab() {
   const [ttsModal, setTtsModal] = useState(null); // { deckName } | null
   const [ttsProgress, setTtsProgress] = useState(null); // { current, total, currentWord }
 
+  // Review state
+  const [reviewDeck, setReviewDeck] = useState(null);
+  const [reviewEntries, setReviewEntries] = useState([]);
+  const [reviewMode, setReviewMode] = useState(null); // 'due' | 'all' | null
+  const [deckDueCounts, setDeckDueCounts] = useState({});
+
+  const fetchDueCounts = useCallback(async (deckList) => {
+    const targets = deckList || decks;
+    if (!targets.length) return;
+    const counts = {};
+    for (const deck of targets) {
+      const { data: entries } = await supabase
+        .from('entries')
+        .select('srs_state, next_review_at')
+        .eq('deck_id', deck.id);
+      counts[deck.id] = getDueEntries(entries || []).length;
+    }
+    setDeckDueCounts(counts);
+  }, [decks]);
+
   useEffect(() => {
     fetchDecks();
   }, [fetchDecks]);
+
+  useEffect(() => {
+    if (decks.length > 0) {
+      fetchDueCounts(decks);
+    }
+  }, [decks]);
 
   const resetForm = () => {
     setFormData({
@@ -163,6 +191,38 @@ export default function DecksTab() {
     }
   };
 
+  const handleStartReview = async (deck, mode = 'due') => {
+    const { data: entries } = await supabase
+      .from('entries').select('*').eq('deck_id', deck.id);
+
+    let reviewList;
+    if (mode === 'due') {
+      reviewList = sortByPriority(getDueEntries(entries || []));
+    } else {
+      reviewList = [...(entries || [])].sort(() => Math.random() - 0.5);
+    }
+
+    if (reviewList.length === 0) {
+      success('No cards to review');
+      return;
+    }
+
+    setReviewDeck(deck);
+    setReviewEntries(reviewList);
+    setReviewMode(mode);
+  };
+
+  const handleReviewComplete = () => {
+    setReviewDeck(null);
+    setReviewEntries([]);
+    setReviewMode(null);
+    fetchDueCounts();
+  };
+
+  const handleReviewUpdateEntry = async (id, data) => {
+    await supabase.from('entries').update(data).eq('id', id);
+  };
+
   const colorOptions = [
     '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6',
     '#ec4899', '#f43f5e', '#f97316', '#eab308',
@@ -222,6 +282,8 @@ export default function DecksTab() {
               onEdit={openEditModal}
               onDelete={openDeleteConfirm}
               onGenerateAudio={handleGenerateAudio}
+              dueCount={deckDueCounts[deck.id] || 0}
+              onReview={(deck) => handleStartReview(deck, 'due')}
             />
           ))}
         </div>
@@ -351,6 +413,16 @@ export default function DecksTab() {
         confirmText="Delete"
         loading={saving}
       />
+
+      {/* Review Mode */}
+      {reviewMode && reviewEntries.length > 0 && (
+        <ReviewMode
+          entries={reviewEntries}
+          onComplete={handleReviewComplete}
+          onUpdateEntry={handleReviewUpdateEntry}
+          onClose={() => { setReviewMode(null); setReviewDeck(null); setReviewEntries([]); }}
+        />
+      )}
 
       {/* TTS Progress Modal */}
       <Modal

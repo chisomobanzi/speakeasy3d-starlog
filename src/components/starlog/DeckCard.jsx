@@ -12,6 +12,8 @@ export default function DeckCard({
   onDelete,
   onShare,
   onGenerateAudio,
+  onReview,
+  dueCount = 0,
   showActions = true,
   className = '',
 }) {
@@ -138,6 +140,16 @@ export default function DeckCard({
             </Badge>
             {deck.forked_from && (
               <Badge variant="info" size="sm">Forked</Badge>
+            )}
+            {dueCount > 0 && (
+              <Badge
+                variant="warning"
+                size="sm"
+                className="cursor-pointer"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReview?.(deck); }}
+              >
+                {dueCount} due
+              </Badge>
             )}
           </div>
         </div>

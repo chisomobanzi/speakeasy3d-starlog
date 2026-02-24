@@ -105,8 +105,7 @@ export function getDueEntries(entries) {
 
   return entries.filter(entry => {
     if (entry.srs_state === SRS_STATES.EXCLUDE) return false;
-    if (entry.srs_state === SRS_STATES.PENDING) return false;
-    if (entry.srs_state === SRS_STATES.NEW) return true;
+    if (entry.srs_state === SRS_STATES.NEW || entry.srs_state === SRS_STATES.PENDING) return true;
 
     if (!entry.next_review_at) return true;
 
