@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, HelpCircle, RotateCcw, Volume2 } from 'lucide-react';
+import { X, Check, HelpCircle, RotateCcw, Volume2, Settings } from 'lucide-react';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
-import { calculateNextReview, QUALITY } from '../../lib/srs';
+import { calculateNextReview, QUALITY, sortByPriority } from '../../lib/srs';
 
 export default function ReviewMode({
   entries,
@@ -11,13 +11,17 @@ export default function ReviewMode({
   onUpdateEntry,
   onClose,
 }) {
+  const [localEntries, setLocalEntries] = useState(entries);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [results, setResults] = useState([]);
   const [isComplete, setIsComplete] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [frontSide, setFrontSide] = useState('word');
+  const [reviewMethod, setReviewMethod] = useState('srs');
 
-  const currentEntry = entries[currentIndex];
-  const progress = ((currentIndex) / entries.length) * 100;
+  const currentEntry = localEntries[currentIndex];
+  const progress = ((currentIndex) / localEntries.length) * 100;
 
   const handleAnswer = useCallback(async (quality) => {
     if (!currentEntry) return;
@@ -36,13 +40,29 @@ export default function ReviewMode({
     await onUpdateEntry?.(currentEntry.id, srsUpdate);
 
     // Move to next or complete
-    if (currentIndex + 1 >= entries.length) {
+    if (currentIndex + 1 >= localEntries.length) {
       setIsComplete(true);
     } else {
       setCurrentIndex(prev => prev + 1);
       setShowAnswer(false);
     }
-  }, [currentEntry, currentIndex, entries.length, onUpdateEntry]);
+  }, [currentEntry, currentIndex, localEntries.length, onUpdateEntry]);
+
+  const handleReviewMethodChange = useCallback((method) => {
+    setReviewMethod(method);
+    const remaining = localEntries.slice(currentIndex);
+    let reordered;
+    if (method === 'random') {
+      reordered = [...remaining];
+      for (let i = reordered.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
+      }
+    } else {
+      reordered = sortByPriority(remaining);
+    }
+    setLocalEntries([...localEntries.slice(0, currentIndex), ...reordered]);
+  }, [localEntries, currentIndex]);
 
   const handlePlayAudio = () => {
     if (currentEntry?.audio_url) {
@@ -54,6 +74,7 @@ export default function ReviewMode({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (showSettings) return;
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         if (!showAnswer) {
@@ -79,7 +100,7 @@ export default function ReviewMode({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAnswer, handleAnswer]);
+  }, [showAnswer, showSettings, handleAnswer]);
 
   if (isComplete) {
     return <ReviewComplete results={results} onClose={onComplete} />;
@@ -104,9 +125,11 @@ export default function ReviewMode({
           <X className="w-5 h-5" />
         </Button>
         <div className="text-sm text-slate-400">
-          {currentIndex + 1} / {entries.length}
+          {currentIndex + 1} / {localEntries.length}
         </div>
-        <div className="w-10" /> {/* Spacer */}
+        <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
+          <Settings className="w-5 h-5" />
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -129,27 +152,35 @@ export default function ReviewMode({
             className="w-full max-w-lg"
           >
             <Card className="text-center py-12">
-              {/* Word */}
+              {/* Front */}
               <div className="mb-8">
-                <h2 className="text-3xl font-bold text-white mb-2">
-                  {currentEntry.word}
-                </h2>
-                {currentEntry.phonetic && (
-                  <p className="text-slate-500">/{currentEntry.phonetic}/</p>
-                )}
-                {currentEntry.audio_url && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handlePlayAudio}
-                    className="mt-2"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </Button>
+                {frontSide === 'word' ? (
+                  <>
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                      {currentEntry.word}
+                    </h2>
+                    {currentEntry.phonetic && (
+                      <p className="text-slate-500">/{currentEntry.phonetic}/</p>
+                    )}
+                    {currentEntry.audio_url && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handlePlayAudio}
+                        className="mt-2"
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <h2 className="text-3xl font-bold text-white mb-2">
+                    {currentEntry.translation}
+                  </h2>
                 )}
               </div>
 
-              {/* Answer */}
+              {/* Back */}
               <AnimatePresence>
                 {showAnswer && (
                   <motion.div
@@ -157,11 +188,37 @@ export default function ReviewMode({
                     animate={{ opacity: 1, y: 0 }}
                     className="border-t border-slate-800 pt-8"
                   >
-                    <p className="text-2xl text-starlog-400 font-semibold">
-                      {currentEntry.translation}
-                    </p>
-                    {currentEntry.notes && (
-                      <p className="text-slate-400 mt-4">{currentEntry.notes}</p>
+                    {frontSide === 'word' ? (
+                      <>
+                        <p className="text-2xl text-starlog-400 font-semibold">
+                          {currentEntry.translation}
+                        </p>
+                        {currentEntry.notes && (
+                          <p className="text-slate-400 mt-4">{currentEntry.notes}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-2xl text-starlog-400 font-semibold mb-2">
+                          {currentEntry.word}
+                        </h3>
+                        {currentEntry.phonetic && (
+                          <p className="text-slate-500 mb-2">/{currentEntry.phonetic}/</p>
+                        )}
+                        {currentEntry.audio_url && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handlePlayAudio}
+                            className="mb-2"
+                          >
+                            <Volume2 className="w-5 h-5" />
+                          </Button>
+                        )}
+                        {currentEntry.notes && (
+                          <p className="text-slate-400 mt-4">{currentEntry.notes}</p>
+                        )}
+                      </>
                     )}
                   </motion.div>
                 )}
@@ -218,6 +275,84 @@ export default function ReviewMode({
           </div>
         )}
       </div>
+
+      {/* Settings panel */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-6"
+          >
+            <div className="w-full max-w-sm space-y-8">
+              <h2 className="text-xl font-bold text-white text-center">Settings</h2>
+
+              {/* Card Front toggle */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Card Front</label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                  <button
+                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                      frontSide === 'word'
+                        ? 'bg-starlog-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+                    }`}
+                    onClick={() => setFrontSide('word')}
+                  >
+                    Word
+                  </button>
+                  <button
+                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                      frontSide === 'translation'
+                        ? 'bg-starlog-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+                    }`}
+                    onClick={() => setFrontSide('translation')}
+                  >
+                    Translation
+                  </button>
+                </div>
+              </div>
+
+              {/* Review Method toggle */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Review Method</label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                  <button
+                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                      reviewMethod === 'srs'
+                        ? 'bg-starlog-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+                    }`}
+                    onClick={() => handleReviewMethodChange('srs')}
+                  >
+                    SRS
+                  </button>
+                  <button
+                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                      reviewMethod === 'random'
+                        ? 'bg-starlog-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+                    }`}
+                    onClick={() => handleReviewMethodChange('random')}
+                  >
+                    Random
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                variant="primary"
+                className="w-full mt-6"
+                onClick={() => setShowSettings(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
