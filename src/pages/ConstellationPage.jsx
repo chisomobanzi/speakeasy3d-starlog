@@ -449,8 +449,6 @@ export default function ConstellationPage({ defaultLanguage }) {
 
 /* ── Floating Nav (left side) ── */
 function FloatingNav({ user, profile, signOut, viewMode, setViewMode }) {
-  const isDecksActive = viewMode === 'decks' || viewMode === 'deck';
-
   const navItems = [
     {
       action: () => { if (viewMode !== 'language') setViewMode('language'); },
@@ -459,12 +457,7 @@ function FloatingNav({ user, profile, signOut, viewMode, setViewMode }) {
       active: viewMode === 'language',
     },
     { to: '/add', icon: Plus, label: 'Capture', accent: true },
-    {
-      action: () => setViewMode(isDecksActive ? 'language' : 'decks'),
-      icon: BookOpen,
-      label: 'Decks',
-      active: isDecksActive,
-    },
+    { to: '/decks', icon: BookOpen, label: 'Decks' },
     { to: '/community', icon: Users, label: 'Community' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
