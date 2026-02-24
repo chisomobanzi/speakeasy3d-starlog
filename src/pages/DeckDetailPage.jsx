@@ -121,12 +121,6 @@ export default function DeckDetailPage() {
     setReviewMode('due');
   };
 
-  const handleStudyAll = () => {
-    const shuffled = [...entries].sort(() => Math.random() - 0.5);
-    setReviewEntries(shuffled);
-    setReviewMode('all');
-  };
-
   const handleReviewComplete = () => {
     setReviewMode(null);
     setReviewEntries([]);
@@ -184,7 +178,7 @@ export default function DeckDetailPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="px-4 py-3 flex flex-wrap items-center gap-2 justify-between bg-slate-900/30 border-b border-slate-800">
+      <div className="px-4 py-3 flex items-center gap-2 justify-between bg-slate-900/30 border-b border-slate-800">
         <div className="flex items-center gap-2 text-sm">
           <Badge>{entries.length} words</Badge>
           <Badge variant="primary">{deck.target_language?.toUpperCase()}</Badge>
@@ -215,7 +209,7 @@ export default function DeckDetailPage() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="hidden md:flex items-center gap-1.5">
           {dueEntries.length > 0 && (
             <Button
               variant="primary"
@@ -223,7 +217,7 @@ export default function DeckDetailPage() {
               onClick={handleStartReview}
             >
               <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">Review</span> ({dueEntries.length})
+              Review ({dueEntries.length})
             </Button>
           )}
           {missingAudioCount > 0 && (
@@ -241,19 +235,19 @@ export default function DeckDetailPage() {
               )}
               {ttsBulkRunning && ttsBulkProgress
                 ? `${ttsBulkProgress.current}/${ttsBulkProgress.total}...`
-                : <span className="hidden sm:inline">Audio ({missingAudioCount})</span>}
+                : `Audio (${missingAudioCount})`}
             </Button>
           )}
           <Link to={`/import?deck=${deckId}`}>
             <Button variant="ghost" size="sm">
               <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">Import</span>
+              Import
             </Button>
           </Link>
           <Link to="/add">
             <Button variant="secondary" size="sm">
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add</span>
+              Add
             </Button>
           </Link>
         </div>
@@ -304,25 +298,17 @@ export default function DeckDetailPage() {
 
           {/* Words list */}
           <div className="px-4 py-4 lg:px-0 space-y-4">
-            {/* Review buttons */}
+            {/* Review button */}
             {entries.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="primary"
-                  onClick={handleStartReview}
-                  disabled={dueEntries.length === 0}
-                  className="flex-1"
-                >
-                  <Zap className="w-4 h-4" />
-                  Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleStudyAll}
-                >
-                  Study All
-                </Button>
-              </div>
+              <Button
+                variant="primary"
+                onClick={handleStartReview}
+                disabled={dueEntries.length === 0}
+                className="w-full"
+              >
+                <Zap className="w-4 h-4" />
+                Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
+              </Button>
             )}
 
             {/* Progress stats */}
