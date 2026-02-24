@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload } from 'lucide-react';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload, Sparkles, Table2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
 import ConstellationView from '../components/starlog/ConstellationView';
+import DeckSpreadsheet from '../components/starlog/DeckSpreadsheet';
 import StarsCanvas from '../components/starlog/StarsCanvas';
 import ConstellationHero from '../components/starlog/ConstellationHero';
 import SuggestWordModal from '../components/starlog/SuggestWordModal';
@@ -40,6 +41,7 @@ export default function ConstellationPage({ defaultLanguage }) {
   const [viewMode, setViewMode] = useState(urlDeckId ? 'deck' : 'language');
   const [activeDeckId, setActiveDeckId] = useState(urlDeckId || null);
   const [activeDeck, setActiveDeck] = useState(null);
+  const [deckView, setDeckView] = useState('constellation'); // 'constellation' | 'table'
 
   // Sync URL deckId to state
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function ConstellationPage({ defaultLanguage }) {
   const { user, profile, signOut } = useAuth();
   const { createEntry } = useEntries();
   const { decks, loading: decksLoading, fetchDecks, getDeck, createDeck, deleteDeck: deleteDeckFn } = useDecks();
-  const { entries: deckEntries, loading: entriesLoading, fetchEntries } = useEntries(activeDeckId);
+  const { entries: deckEntries, loading: entriesLoading, fetchEntries, createEntry: createDeckEntry, updateEntry: updateDeckEntry, deleteEntry: deleteDeckEntry } = useEntries(activeDeckId);
   const toast = useToast();
 
   // Load decks when entering decks or deck mode
@@ -92,6 +94,7 @@ export default function ConstellationPage({ defaultLanguage }) {
       getDeck(activeDeckId).then(d => { if (d) setActiveDeck(d); });
       fetchEntries(activeDeckId);
     }
+    setDeckView('constellation');
   }, [activeDeckId, getDeck, fetchEntries]);
 
   // Deck entry click handler
@@ -255,15 +258,28 @@ export default function ConstellationPage({ defaultLanguage }) {
       {showStars && <StarsCanvas />}
 
       {/* Viz area */}
-      <div className="flex-1 relative flex items-center justify-center">
+      <div className={`flex-1 relative flex ${viewMode === 'deck' && deckView === 'table' ? '' : 'items-center justify-center'}`}>
         {viewMode === 'deck' && activeDeckId ? (
-          <ConstellationView
-            entries={deckEntries}
-            deckName={activeDeck?.name || 'Loading...'}
-            deckColor={activeDeck?.color || '#06b6d4'}
-            onSelectEntry={handleDeckEntryClick}
-            embedded
-          />
+          deckView === 'table' ? (
+            <DeckSpreadsheet
+              entries={deckEntries}
+              deck={activeDeck}
+              onCreateEntry={createDeckEntry}
+              onUpdateEntry={updateDeckEntry}
+              onDeleteEntry={deleteDeckEntry}
+              deckId={activeDeckId}
+              toast={toast}
+              className="absolute inset-4"
+            />
+          ) : (
+            <ConstellationView
+              entries={deckEntries}
+              deckName={activeDeck?.name || 'Loading...'}
+              deckColor={activeDeck?.color || '#06b6d4'}
+              onSelectEntry={handleDeckEntryClick}
+              embedded
+            />
+          )
         ) : (
           <PublicConstellation
             language={language}
@@ -376,6 +392,8 @@ export default function ConstellationPage({ defaultLanguage }) {
           deleteDeck={deleteDeckFn}
           toast={toast}
           navigate={navigate}
+          deckView={deckView}
+          setDeckView={setDeckView}
         />
       ) : (
         <ConstellationSidebar
@@ -1086,7 +1104,7 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
 }
 
 /* ── Deck Detail Sidebar ── */
-function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, deleteDeck, toast, navigate }) {
+function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, deleteDeck, toast, navigate, deckView, setDeckView }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -1174,6 +1192,28 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
             </div>
           </div>
         )}
+
+        {/* Stars / Table toggle */}
+        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+          <button
+            onClick={() => setDeckView('constellation')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-medium transition-all ${
+              deckView === 'constellation' ? 'bg-white/[.10] text-white' : 'bg-white/[.02] text-white/40 hover:text-white/60'
+            }`}
+          >
+            <Sparkles className="w-3 h-3" />
+            Stars
+          </button>
+          <button
+            onClick={() => setDeckView('table')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-medium transition-all ${
+              deckView === 'table' ? 'bg-white/[.10] text-white' : 'bg-white/[.02] text-white/40 hover:text-white/60'
+            }`}
+          >
+            <Table2 className="w-3 h-3" />
+            Table
+          </button>
+        </div>
 
         {/* Search */}
         {entries.length > 0 && (

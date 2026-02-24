@@ -81,15 +81,18 @@ function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Constellation as default view (fullscreen, no AppShell) */}
-      <Route path="/" element={<ConstellationPage defaultLanguage="sn" />} />
+      {/* Constellation view (fullscreen, no AppShell) */}
       <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
-      <Route path="/constellation" element={<ConstellationPage />} />
-      <Route path="/deck/:deckId" element={<ConstellationPage defaultLanguage="sn" />} />
+      <Route path="/constellation" element={<ConstellationPage defaultLanguage="sn" />} />
 
       {/* App routes with AppShell layout */}
       <Route element={<AppShell />}>
-        {/* Legacy search (standalone page) */}
+        {/* Home / Decks */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <DecksPage />
+          </ProtectedRoute>
+        } />
         <Route path="search" element={<SearchPage />} />
         <Route path="community" element={<CommunityPage />} />
 

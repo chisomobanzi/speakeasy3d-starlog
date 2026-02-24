@@ -3,8 +3,8 @@ import { Star, Plus, Users, BookOpen, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
-  { path: '/', icon: Star, label: 'Explore' },
-  { path: '/decks', icon: BookOpen, label: 'Decks' },
+  { path: '/', icon: BookOpen, label: 'Decks' },
+  { path: '/constellation', icon: Star, label: 'Explore' },
   { path: '/add', icon: Plus, label: 'Add', highlight: true },
   { path: '/community', icon: Users, label: 'Community' },
   { path: '/settings', icon: Settings, label: 'Settings' },
@@ -25,7 +25,7 @@ export default function BottomNav({ className = '' }) {
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = item.path === '/'
-            ? location.pathname === '/'
+            ? location.pathname === '/' || location.pathname.startsWith('/decks')
             : location.pathname.startsWith(item.path);
           const Icon = item.icon;
 

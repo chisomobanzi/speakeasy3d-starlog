@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload, LayoutList, Table2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDecks } from '../hooks/useDecks';
 import { useEntries } from '../hooks/useEntries';
@@ -10,6 +10,7 @@ import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import EntryCard from '../components/starlog/EntryCard';
 import ConstellationView from '../components/starlog/ConstellationView';
+import DeckSpreadsheet from '../components/starlog/DeckSpreadsheet';
 import { EntryCardSkeleton } from '../components/ui/LoadingSpinner';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/Modal';
@@ -18,15 +19,16 @@ import { getReviewStats } from '../lib/srs';
 export default function DeckDetailPage() {
   const { deckId } = useParams();
   const navigate = useNavigate();
-  const { success, error } = useToast();
+  const toast = useToast();
 
   const { getDeck, deleteDeck } = useDecks();
-  const { entries, loading, fetchEntries, deleteEntry } = useEntries(deckId);
+  const { entries, loading, fetchEntries, deleteEntry, createEntry, updateEntry } = useEntries(deckId);
 
   const [deck, setDeck] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
 
   useEffect(() => {
     loadDeck();
@@ -36,7 +38,7 @@ export default function DeckDetailPage() {
   const loadDeck = async () => {
     const deckData = await getDeck(deckId);
     if (!deckData) {
-      error('Deck not found');
+      toast.error('Deck not found');
       navigate('/');
       return;
     }
@@ -49,9 +51,9 @@ export default function DeckDetailPage() {
     setDeleting(false);
 
     if (deleteError) {
-      error('Failed to delete deck');
+      toast.error('Failed to delete deck');
     } else {
-      success('Deck deleted');
+      toast.success('Deck deleted');
       navigate('/');
     }
   };
@@ -59,9 +61,9 @@ export default function DeckDetailPage() {
   const handleDeleteEntry = async (entry) => {
     const { error: deleteError } = await deleteEntry(entry.id);
     if (deleteError) {
-      error('Failed to delete entry');
+      toast.error('Failed to delete entry');
     } else {
-      success('Entry deleted');
+      toast.success('Entry deleted');
     }
   };
 
@@ -122,9 +124,35 @@ export default function DeckDetailPage() {
 
       {/* Stats bar */}
       <div className="px-4 py-3 flex items-center justify-between bg-slate-900/30 border-b border-slate-800">
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 text-sm">
           <Badge>{entries.length} words</Badge>
           <Badge variant="primary">{deck.target_language?.toUpperCase()}</Badge>
+
+          {/* Cards / Table toggle */}
+          <div className="flex rounded-lg overflow-hidden border border-slate-700">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors ${
+                viewMode === 'cards'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Table2 className="w-3.5 h-3.5" />
+              Table
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Link to={`/import?deck=${deckId}`}>
@@ -142,123 +170,137 @@ export default function DeckDetailPage() {
         </div>
       </div>
 
-      {/* Side-by-side layout on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-4 lg:p-4">
-        {/* Constellation view */}
-        <div className="lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)]">
-          <ConstellationView
+      {/* Content: Table view or Cards view */}
+      {viewMode === 'table' ? (
+        <div className="p-4">
+          <DeckSpreadsheet
             entries={entries}
-            deckName={deck.name}
-            deckColor={deck.color || '#10b981'}
+            deck={deck}
+            onCreateEntry={createEntry}
+            onUpdateEntry={updateEntry}
+            onDeleteEntry={deleteEntry}
+            deckId={deckId}
+            toast={toast}
           />
         </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-4 lg:p-4">
+          {/* Constellation view */}
+          <div className="lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)]">
+            <ConstellationView
+              entries={entries}
+              deckName={deck.name}
+              deckColor={deck.color || '#10b981'}
+            />
+          </div>
 
-        {/* Words list */}
-        <div className="px-4 py-4 lg:px-0 space-y-4">
-          {/* Progress stats */}
-          {entries.length > 0 && (
-            <div className="grid grid-cols-4 gap-3">
-              <Card className="text-center py-3">
-                <p className="text-lg font-bold text-white">{stats.new + stats.pending}</p>
-                <p className="text-xs text-slate-500">New</p>
-              </Card>
-              <Card className="text-center py-3">
-                <p className="text-lg font-bold text-yellow-400">{stats.due}</p>
-                <p className="text-xs text-slate-500">Due</p>
-              </Card>
-              <Card className="text-center py-3">
-                <p className="text-lg font-bold text-green-400">{stats.mastered}</p>
-                <p className="text-xs text-slate-500">Mastered</p>
-              </Card>
-              <Card className="text-center py-3">
-                <p className="text-lg font-bold text-cyan-400">
-                  {Math.round(stats.averageMastery * 100)}%
-                </p>
-                <p className="text-xs text-slate-500">Mastery</p>
-              </Card>
-            </div>
-          )}
+          {/* Words list */}
+          <div className="px-4 py-4 lg:px-0 space-y-4">
+            {/* Progress stats */}
+            {entries.length > 0 && (
+              <div className="grid grid-cols-4 gap-3">
+                <Card className="text-center py-3">
+                  <p className="text-lg font-bold text-white">{stats.new + stats.pending}</p>
+                  <p className="text-xs text-slate-500">New</p>
+                </Card>
+                <Card className="text-center py-3">
+                  <p className="text-lg font-bold text-yellow-400">{stats.due}</p>
+                  <p className="text-xs text-slate-500">Due</p>
+                </Card>
+                <Card className="text-center py-3">
+                  <p className="text-lg font-bold text-green-400">{stats.mastered}</p>
+                  <p className="text-xs text-slate-500">Mastered</p>
+                </Card>
+                <Card className="text-center py-3">
+                  <p className="text-lg font-bold text-cyan-400">
+                    {Math.round(stats.averageMastery * 100)}%
+                  </p>
+                  <p className="text-xs text-slate-500">Mastery</p>
+                </Card>
+              </div>
+            )}
 
-          {/* Search */}
-          {entries.length > 0 && (
-            <div className="relative">
-              <Input
-                placeholder="Search words, translations, tags..."
-                icon={Search}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )}
+            {/* Search */}
+            {entries.length > 0 && (
+              <div className="relative">
+                <Input
+                  placeholder="Search words, translations, tags..."
+                  icon={Search}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
 
-          {/* Filtered count */}
-          {searchQuery && (
-            <p className="text-sm text-slate-400">
-              {filteredEntries.length} of {entries.length} word{entries.length !== 1 ? 's' : ''} matching "{searchQuery}"
-            </p>
-          )}
-
-          {/* Entries list */}
-          {loading ? (
-            <div className="space-y-4">
-              <EntryCardSkeleton />
-              <EntryCardSkeleton />
-              <EntryCardSkeleton />
-            </div>
-          ) : filteredEntries.length === 0 && !searchQuery ? (
-            <Card className="text-center py-12">
-              <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No words yet</h3>
-              <p className="text-slate-400 mb-4">
-                Start adding vocabulary to this deck
+            {/* Filtered count */}
+            {searchQuery && (
+              <p className="text-sm text-slate-400">
+                {filteredEntries.length} of {entries.length} word{entries.length !== 1 ? 's' : ''} matching "{searchQuery}"
               </p>
-              <Link to="/add">
-                <Button variant="primary">
-                  <Plus className="w-5 h-5" />
-                  Add Your First Word
+            )}
+
+            {/* Entries list */}
+            {loading ? (
+              <div className="space-y-4">
+                <EntryCardSkeleton />
+                <EntryCardSkeleton />
+                <EntryCardSkeleton />
+              </div>
+            ) : filteredEntries.length === 0 && !searchQuery ? (
+              <Card className="text-center py-12">
+                <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">No words yet</h3>
+                <p className="text-slate-400 mb-4">
+                  Start adding vocabulary to this deck
+                </p>
+                <Link to="/add">
+                  <Button variant="primary">
+                    <Plus className="w-5 h-5" />
+                    Add Your First Word
+                  </Button>
+                </Link>
+              </Card>
+            ) : filteredEntries.length === 0 && searchQuery ? (
+              <Card className="text-center py-8">
+                <Search className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+                <p className="text-slate-400">No words matching "{searchQuery}"</p>
+                <Button variant="ghost" onClick={() => setSearchQuery('')} className="mt-2">
+                  Clear search
                 </Button>
-              </Link>
-            </Card>
-          ) : filteredEntries.length === 0 && searchQuery ? (
-            <Card className="text-center py-8">
-              <Search className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-              <p className="text-slate-400">No words matching "{searchQuery}"</p>
-              <Button variant="ghost" onClick={() => setSearchQuery('')} className="mt-2">
-                Clear search
-              </Button>
-            </Card>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3"
-            >
-              {filteredEntries.map((entry, index) => (
-                <motion.div
-                  key={entry.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                >
-                  <EntryCard
-                    entry={entry}
-                    onDelete={handleDeleteEntry}
-                    onPlay={handlePlayAudio}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
+              </Card>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-3"
+              >
+                {filteredEntries.map((entry, index) => (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                  >
+                    <EntryCard
+                      entry={entry}
+                      onDelete={handleDeleteEntry}
+                      onPlay={handlePlayAudio}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Delete confirmation */}
       <ConfirmDialog
