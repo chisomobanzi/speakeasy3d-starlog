@@ -39,7 +39,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
+    <header className="hidden md:block sticky top-0 z-40 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Left side - Logo & Title */}

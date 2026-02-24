@@ -1,10 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Star, Plus, Users, BookOpen, Settings } from 'lucide-react';
+import { Search, Plus, Users, BookOpen, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
   { path: '/', icon: BookOpen, label: 'Decks' },
-  { path: '/constellation', icon: Star, label: 'Explore' },
+  { path: '/search', icon: Search, label: 'Search' },
   { path: '/add', icon: Plus, label: 'Add', highlight: true },
   { path: '/community', icon: Users, label: 'Community' },
   { path: '/settings', icon: Settings, label: 'Settings' },
