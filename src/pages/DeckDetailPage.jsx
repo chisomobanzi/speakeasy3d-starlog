@@ -184,8 +184,8 @@ export default function DeckDetailPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="px-4 py-3 flex items-center justify-between bg-slate-900/30 border-b border-slate-800">
-        <div className="flex items-center gap-3 text-sm">
+      <div className="px-4 py-3 flex flex-wrap items-center gap-2 justify-between bg-slate-900/30 border-b border-slate-800">
+        <div className="flex items-center gap-2 text-sm">
           <Badge>{entries.length} words</Badge>
           <Badge variant="primary">{deck.target_language?.toUpperCase()}</Badge>
 
@@ -215,7 +215,7 @@ export default function DeckDetailPage() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {dueEntries.length > 0 && (
             <Button
               variant="primary"
@@ -223,7 +223,7 @@ export default function DeckDetailPage() {
               onClick={handleStartReview}
             >
               <Zap className="w-4 h-4" />
-              Review ({dueEntries.length})
+              <span className="hidden sm:inline">Review</span> ({dueEntries.length})
             </Button>
           )}
           {missingAudioCount > 0 && (
@@ -241,19 +241,19 @@ export default function DeckDetailPage() {
               )}
               {ttsBulkRunning && ttsBulkProgress
                 ? `${ttsBulkProgress.current}/${ttsBulkProgress.total}...`
-                : `Audio (${missingAudioCount})`}
+                : <span className="hidden sm:inline">Audio ({missingAudioCount})</span>}
             </Button>
           )}
           <Link to={`/import?deck=${deckId}`}>
             <Button variant="ghost" size="sm">
               <Upload className="w-4 h-4" />
-              Import
+              <span className="hidden sm:inline">Import</span>
             </Button>
           </Link>
           <Link to="/add">
             <Button variant="secondary" size="sm">
               <Plus className="w-4 h-4" />
-              Add
+              <span className="hidden sm:inline">Add</span>
             </Button>
           </Link>
         </div>
