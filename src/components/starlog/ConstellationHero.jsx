@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { generateStars } from '../../lib/constellation-utils';
+import starlogLogo from '../../logo_starlog.svg';
 
 /**
  * Landing page for /constellation (no language code).
@@ -54,6 +55,7 @@ export default function ConstellationHero() {
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-12">
         {/* Title */}
         <div className="text-center mb-12">
+          <img src={starlogLogo} alt="Starlog" className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">
             Living Language
             <br />
