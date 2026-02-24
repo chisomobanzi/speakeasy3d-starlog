@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, BookOpen, Upload } from 'lucide-react';
+import { Plus, BookOpen, Upload, Volume2, Loader2 } from 'lucide-react';
 import { useDecks } from '../../hooks/useDecks';
+import { supabase } from '../../lib/supabase';
+import { generateDeckTTS } from '../../lib/tts';
 import DeckCard from './DeckCard';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -25,6 +27,8 @@ export default function DecksTab() {
     color: '#10b981',
   });
   const [saving, setSaving] = useState(false);
+  const [ttsModal, setTtsModal] = useState(null); // { deckName } | null
+  const [ttsProgress, setTtsProgress] = useState(null); // { current, total, currentWord }
 
   useEffect(() => {
     fetchDecks();
@@ -119,6 +123,46 @@ export default function DecksTab() {
     setShowDeleteConfirm(true);
   };
 
+  const handleGenerateAudio = async (deck) => {
+    setTtsModal({ deckName: deck.name });
+    setTtsProgress(null);
+    try {
+      // Fetch entries for this deck
+      const { data: entries, error: fetchErr } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('deck_id', deck.id);
+
+      if (fetchErr) throw fetchErr;
+
+      const missing = (entries || []).filter(e => !e.audio_url);
+      if (missing.length === 0) {
+        success('All entries already have audio');
+        setTtsModal(null);
+        return;
+      }
+
+      const results = await generateDeckTTS(missing, deck.target_language, deck.id, (progress) => {
+        setTtsProgress(progress);
+      });
+
+      // Update each entry with its audioUrl
+      for (const { entryId, audioUrl } of results) {
+        await supabase
+          .from('entries')
+          .update({ audio_url: audioUrl, updated_at: new Date().toISOString() })
+          .eq('id', entryId);
+      }
+
+      success(`Generated audio for ${results.length} words`);
+    } catch (err) {
+      error(`TTS failed: ${err.message}`);
+    } finally {
+      setTtsModal(null);
+      setTtsProgress(null);
+    }
+  };
+
   const colorOptions = [
     '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6',
     '#ec4899', '#f43f5e', '#f97316', '#eab308',
@@ -177,6 +221,7 @@ export default function DecksTab() {
               deck={deck}
               onEdit={openEditModal}
               onDelete={openDeleteConfirm}
+              onGenerateAudio={handleGenerateAudio}
             />
           ))}
         </div>
@@ -306,6 +351,43 @@ export default function DecksTab() {
         confirmText="Delete"
         loading={saving}
       />
+
+      {/* TTS Progress Modal */}
+      <Modal
+        isOpen={!!ttsModal}
+        onClose={() => {}}
+        title="Generating Audio"
+        showClose={false}
+        closeOnOverlay={false}
+        closeOnEscape={false}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400">
+            Generating TTS for <span className="text-white font-medium">{ttsModal?.deckName}</span>
+          </p>
+          {ttsProgress ? (
+            <>
+              <div className="flex items-center gap-3 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin text-starlog-400" />
+                <span className="text-slate-300 truncate">"{ttsProgress.currentWord}"</span>
+                <span className="ml-auto text-slate-500">{ttsProgress.current}/{ttsProgress.total}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-starlog-500 transition-all"
+                  style={{ width: `${(ttsProgress.current / ttsProgress.total) * 100}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-3 text-sm text-slate-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading entries...</span>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

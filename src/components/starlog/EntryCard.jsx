@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, MoreVertical, Edit, Trash2, Copy, Volume2, Plus } from 'lucide-react';
+import { Play, Pause, MoreVertical, Edit, Trash2, Copy, Volume2, Plus, Loader2 } from 'lucide-react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -12,6 +12,8 @@ export default function EntryCard({
   onDelete,
   onCopy,
   onPlay,
+  onGenerateTTS,
+  ttsLoading = false,
   showDeck = false,
   compact = false,
   className = '',
@@ -58,11 +60,15 @@ export default function EntryCard({
           </div>
           <p className="text-sm text-slate-400 truncate">{entry.translation}</p>
         </div>
-        {entry.audio_url && (
+        {entry.audio_url ? (
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handlePlay(); }}>
             {isPlaying ? <Pause className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
-        )}
+        ) : onGenerateTTS ? (
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onGenerateTTS(entry); }} disabled={ttsLoading}>
+            {ttsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4 text-slate-600" />}
+          </Button>
+        ) : null}
       </Card>
     );
   }
@@ -82,7 +88,7 @@ export default function EntryCard({
             {entry.phonetic && (
               <span className="text-slate-500">/{entry.phonetic}/</span>
             )}
-            {entry.audio_url && (
+            {entry.audio_url ? (
               <Button
                 variant="ghost"
                 size="icon"
@@ -95,7 +101,21 @@ export default function EntryCard({
                   <Play className="w-4 h-4" />
                 )}
               </Button>
-            )}
+            ) : onGenerateTTS ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onGenerateTTS(entry)}
+                disabled={ttsLoading}
+                className="text-slate-600 hover:text-starlog-400"
+              >
+                {ttsLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+              </Button>
+            ) : null}
           </div>
           <p className="text-starlog-400 font-medium">{entry.translation}</p>
         </div>

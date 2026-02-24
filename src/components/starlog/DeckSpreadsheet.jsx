@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { Trash2, X, Volume2, Loader2 } from 'lucide-react';
 import { ConfirmDialog } from '../ui/Modal';
 
 const COLUMNS = [
@@ -29,7 +29,7 @@ function masteryColor(level) {
 
 const EMPTY_DRAFT = { word: '', phonetic: '', translation: '', notes: '', tags: '' };
 
-export default function DeckSpreadsheet({ entries, deck, onCreateEntry, onUpdateEntry, onDeleteEntry, deckId, toast, className = '' }) {
+export default function DeckSpreadsheet({ entries, deck, onCreateEntry, onUpdateEntry, onDeleteEntry, deckId, toast, onGenerateTTS, ttsLoadingId, className = '' }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState({});
@@ -253,6 +253,8 @@ export default function DeckSpreadsheet({ entries, deck, onCreateEntry, onUpdate
                 deckColor={deckColor}
                 setRef={setRef}
                 saving={saving}
+                onGenerateTTS={onGenerateTTS}
+                ttsLoading={ttsLoadingId === entry.id}
               />
             ))}
             <SpreadsheetNewRow
@@ -314,13 +316,16 @@ function SpreadsheetHeader({ allSelected, onToggleAll }) {
             {col.label}{col.required && <span className="text-red-400/60 ml-0.5">*</span>}
           </th>
         ))}
+        <th className="w-[56px] text-center px-2 py-3 text-xs uppercase tracking-wider font-medium text-slate-500">
+          <Volume2 className="w-3.5 h-3.5 mx-auto" />
+        </th>
         <th className="w-[64px] text-left px-3 py-3 text-xs uppercase tracking-wider font-medium text-slate-500">
           Mastery
         </th>
         <th className="w-[44px]" />
       </tr>
       <tr>
-        <td colSpan={COLUMNS.length + 3} className="h-px bg-white/10" />
+        <td colSpan={COLUMNS.length + 4} className="h-px bg-white/10" />
       </tr>
     </thead>
   );
@@ -331,7 +336,7 @@ function SpreadsheetRow({
   entry, isEditing, editDraft, onEditDraftChange,
   isSelected, onToggleSelect, onStartEdit, onKeyDown, onBlur,
   confirmingDelete, onRequestDelete, onConfirmDelete, onCancelDelete,
-  deckColor, setRef, saving,
+  deckColor, setRef, saving, onGenerateTTS, ttsLoading,
 }) {
   const mastery = entry.mastery_level || 0;
 
@@ -386,6 +391,30 @@ function SpreadsheetRow({
           )}
         </td>
       ))}
+
+      {/* Audio */}
+      <td className="px-2 py-2.5 text-center">
+        {entry.audio_url ? (
+          <button
+            onClick={() => { const a = new Audio(entry.audio_url); a.play(); }}
+            className="p-1 rounded text-slate-400 hover:text-starlog-400 transition-colors"
+            title="Play audio"
+          >
+            <Volume2 className="w-4 h-4" />
+          </button>
+        ) : onGenerateTTS ? (
+          <button
+            onClick={() => onGenerateTTS(entry)}
+            disabled={ttsLoading}
+            className="p-1 rounded text-slate-700 hover:text-slate-400 transition-colors disabled:opacity-50"
+            title="Generate audio"
+          >
+            {ttsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+        ) : (
+          <span className="text-slate-700">&mdash;</span>
+        )}
+      </td>
 
       {/* Mastery bar */}
       <td className="px-3 py-2.5">
@@ -454,6 +483,7 @@ function SpreadsheetNewRow({ draft, onDraftChange, onKeyDown, setRef }) {
           />
         </td>
       ))}
+      <td /> {/* audio - empty */}
       <td /> {/* mastery - empty */}
       <td /> {/* delete - empty */}
     </tr>

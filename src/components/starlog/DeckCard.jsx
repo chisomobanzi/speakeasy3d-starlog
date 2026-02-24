@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, MoreVertical, Edit, Trash2, Share2 } from 'lucide-react';
+import { BookOpen, MoreVertical, Edit, Trash2, Share2, Volume2 } from 'lucide-react';
 import { useState } from 'react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
@@ -11,6 +11,7 @@ export default function DeckCard({
   onEdit,
   onDelete,
   onShare,
+  onGenerateAudio,
   showActions = true,
   className = '',
 }) {
@@ -96,6 +97,18 @@ export default function DeckCard({
                     >
                       <Share2 className="w-4 h-4" />
                       Share
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onGenerateAudio?.(deck);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      Generate Audio
                     </button>
                     <button
                       onClick={(e) => {

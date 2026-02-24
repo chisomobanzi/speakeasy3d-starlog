@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload, LayoutList, Table2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload, LayoutList, Table2, Volume2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDecks } from '../hooks/useDecks';
 import { useEntries } from '../hooks/useEntries';
@@ -15,6 +15,7 @@ import { EntryCardSkeleton } from '../components/ui/LoadingSpinner';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui/Modal';
 import { getReviewStats } from '../lib/srs';
+import { generateTTS, generateDeckTTS } from '../lib/tts';
 
 export default function DeckDetailPage() {
   const { deckId } = useParams();
@@ -29,6 +30,9 @@ export default function DeckDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  const [ttsLoadingId, setTtsLoadingId] = useState(null);
+  const [ttsBulkProgress, setTtsBulkProgress] = useState(null);
+  const [ttsBulkRunning, setTtsBulkRunning] = useState(false);
 
   useEffect(() => {
     loadDeck();
@@ -71,6 +75,39 @@ export default function DeckDetailPage() {
     const audio = new Audio(url);
     await audio.play();
   };
+
+  const handleGenerateTTS = async (entry) => {
+    setTtsLoadingId(entry.id);
+    try {
+      const audioUrl = await generateTTS(entry.word, deck.target_language, deckId);
+      await updateEntry(entry.id, { audio_url: audioUrl });
+      toast.success(`Audio generated for "${entry.word}"`);
+    } catch (err) {
+      toast.error(`TTS failed: ${err.message}`);
+    } finally {
+      setTtsLoadingId(null);
+    }
+  };
+
+  const handleBulkTTS = async () => {
+    const missing = entries.filter(e => !e.audio_url);
+    if (missing.length === 0) {
+      toast.info('All entries already have audio');
+      return;
+    }
+    setTtsBulkRunning(true);
+    const results = await generateDeckTTS(missing, deck.target_language, deckId, (progress) => {
+      setTtsBulkProgress(progress);
+    });
+    for (const { entryId, audioUrl } of results) {
+      await updateEntry(entryId, { audio_url: audioUrl });
+    }
+    setTtsBulkRunning(false);
+    setTtsBulkProgress(null);
+    toast.success(`Generated audio for ${results.length} words`);
+  };
+
+  const missingAudioCount = entries.filter(e => !e.audio_url).length;
 
   // Filter entries by search
   const filteredEntries = useMemo(() => {
@@ -155,6 +192,24 @@ export default function DeckDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {missingAudioCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBulkTTS}
+              disabled={ttsBulkRunning}
+              className="text-slate-400 hover:text-starlog-400"
+            >
+              {ttsBulkRunning ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+              {ttsBulkRunning && ttsBulkProgress
+                ? `${ttsBulkProgress.current}/${ttsBulkProgress.total}...`
+                : `Audio (${missingAudioCount})`}
+            </Button>
+          )}
           <Link to={`/import?deck=${deckId}`}>
             <Button variant="ghost" size="sm">
               <Upload className="w-4 h-4" />
@@ -170,6 +225,23 @@ export default function DeckDetailPage() {
         </div>
       </div>
 
+      {/* Bulk TTS progress bar */}
+      {ttsBulkRunning && ttsBulkProgress && (
+        <div className="px-4 py-2 bg-slate-900/30 border-b border-slate-800">
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <Loader2 className="w-3 h-3 animate-spin text-starlog-400" />
+            <span>Generating: "{ttsBulkProgress.currentWord}"</span>
+            <span className="ml-auto">{ttsBulkProgress.current}/{ttsBulkProgress.total}</span>
+          </div>
+          <div className="mt-1.5 h-1 rounded-full bg-white/5 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-starlog-500 transition-all"
+              style={{ width: `${(ttsBulkProgress.current / ttsBulkProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Content: Table view or Cards view */}
       {viewMode === 'table' ? (
         <div className="p-4">
@@ -181,6 +253,8 @@ export default function DeckDetailPage() {
             onDeleteEntry={deleteEntry}
             deckId={deckId}
             toast={toast}
+            onGenerateTTS={handleGenerateTTS}
+            ttsLoadingId={ttsLoadingId}
           />
         </div>
       ) : (
@@ -293,6 +367,8 @@ export default function DeckDetailPage() {
                       entry={entry}
                       onDelete={handleDeleteEntry}
                       onPlay={handlePlayAudio}
+                      onGenerateTTS={handleGenerateTTS}
+                      ttsLoading={ttsLoadingId === entry.id}
                     />
                   </motion.div>
                 ))}
