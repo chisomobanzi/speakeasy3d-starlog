@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
+import starlogLogo from '../../logo_starlog.svg';
 
 export default function Header() {
   const { user, profile, signOut } = useAuth();
@@ -44,9 +45,7 @@ export default function Header() {
           {/* Left side - Logo & Title */}
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-starlog-400 to-starlog-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
+              <img src={starlogLogo} alt="Starlog" className="w-8 h-8" />
               <span className="font-semibold text-white">
                 Starlog
               </span>

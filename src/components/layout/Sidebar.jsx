@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
+import starlogLogo from '../../logo_starlog.svg';
 
 const mainNavItems = [
   { path: '/', icon: Home, label: 'Dashboard' },
@@ -48,9 +49,7 @@ export default function Sidebar({ className = '' }) {
       {/* Logo */}
       <div className="p-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-starlog-400 to-starlog-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold">S</span>
-          </div>
+          <img src={starlogLogo} alt="Starlog" className="w-10 h-10" />
           <div>
             <h1 className="font-semibold text-white">Starlog</h1>
             <p className="text-xs text-slate-500">Language Platform</p>
