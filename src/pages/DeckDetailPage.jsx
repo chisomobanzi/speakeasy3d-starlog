@@ -287,6 +287,21 @@ export default function DeckDetailPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-4 lg:p-4">
+          {/* Review button - mobile only, above constellation */}
+          {entries.length > 0 && (
+            <div className="px-4 pt-4 lg:hidden">
+              <Button
+                variant="primary"
+                onClick={handleStartReview}
+                disabled={dueEntries.length === 0}
+                className="w-full"
+              >
+                <Zap className="w-4 h-4" />
+                Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
+              </Button>
+            </div>
+          )}
+
           {/* Constellation view */}
           <div className="lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)]">
             <ConstellationView
@@ -298,13 +313,13 @@ export default function DeckDetailPage() {
 
           {/* Words list */}
           <div className="px-4 py-4 lg:px-0 space-y-4">
-            {/* Review button */}
+            {/* Review button - desktop only */}
             {entries.length > 0 && (
               <Button
                 variant="primary"
                 onClick={handleStartReview}
                 disabled={dueEntries.length === 0}
-                className="w-full"
+                className="w-full hidden lg:flex"
               >
                 <Zap className="w-4 h-4" />
                 Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
@@ -313,7 +328,7 @@ export default function DeckDetailPage() {
 
             {/* Progress stats */}
             {entries.length > 0 && (
-              <div className="grid grid-cols-4 gap-3">
+              <div className="hidden lg:grid grid-cols-4 gap-3">
                 <Card className="text-center py-3">
                   <p className="text-lg font-bold text-white">{stats.new + stats.pending}</p>
                   <p className="text-xs text-slate-500">New</p>
