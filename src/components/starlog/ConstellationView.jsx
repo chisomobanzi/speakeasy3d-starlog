@@ -543,7 +543,7 @@ export default function ConstellationView({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 rounded-2xl bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center lg:hidden z-20"
-              onClick={() => setShowLegend(false)}
+              onClick={(e) => { e.stopPropagation(); setShowLegend(false); }}
             >
               <button
                 onClick={() => setShowLegend(false)}
