@@ -287,21 +287,6 @@ export default function DeckDetailPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-4 lg:p-4">
-          {/* Review button - mobile only, above constellation */}
-          {entries.length > 0 && (
-            <div className="px-4 pt-4 lg:hidden">
-              <Button
-                variant="primary"
-                onClick={handleStartReview}
-                disabled={dueEntries.length === 0}
-                className="w-full"
-              >
-                <Zap className="w-4 h-4" />
-                Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
-              </Button>
-            </div>
-          )}
-
           {/* Constellation view */}
           <div className="lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)]">
             <ConstellationView
@@ -309,6 +294,21 @@ export default function DeckDetailPage() {
               deckName={deck.name}
               deckColor={deck.color || '#10b981'}
             />
+
+            {/* Review button - mobile only, below constellation */}
+            {entries.length > 0 && (
+              <div className="px-4 pb-2 lg:hidden">
+                <Button
+                  variant="primary"
+                  onClick={handleStartReview}
+                  disabled={dueEntries.length === 0}
+                  className="w-full"
+                >
+                  <Zap className="w-4 h-4" />
+                  Review {dueEntries.length > 0 ? `(${dueEntries.length} due)` : '— All caught up!'}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Words list */}
