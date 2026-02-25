@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Info, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // ============================================================================
 // SRS STATES & VISUAL ENCODING
@@ -235,6 +237,7 @@ export default function ConstellationView({
   embedded = false,
 }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [showLegend, setShowLegend] = useState(false);
 
   const { points } = useMemo(() => {
     return generateConstellationData(entries);
@@ -499,7 +502,7 @@ export default function ConstellationView({
   return (
     <div className="px-4 py-4 space-y-4">
       {/* Constellation SVG */}
-      <div className="relative">
+      <div className="relative" onClick={() => setShowLegend(prev => !prev)}>
         <svg
           viewBox="-1.1 -1.1 2.2 2.2"
           className="w-full aspect-square rounded-2xl"
@@ -525,10 +528,66 @@ export default function ConstellationView({
             </div>
           </div>
         )}
+
+        {/* Info signifier (mobile only) */}
+        <div className="absolute bottom-3 right-3 lg:hidden text-slate-400/60 pointer-events-none">
+          <Info size={18} />
+        </div>
+
+        {/* Mobile legend overlay */}
+        <AnimatePresence>
+          {showLegend && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 rounded-2xl bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center lg:hidden z-20"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowLegend(false)}
+                className="absolute top-3 right-3 text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+              <h4 className="text-sm font-medium text-slate-400 mb-4">Star States</h4>
+              <div className="grid grid-cols-2 gap-2 px-6">
+                {Object.entries(SRS_STATES).map(([key, value]) => {
+                  const visual = SRS_VISUALS[value];
+                  const count = stats.byState[value] || 0;
+
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-sm">
+                      <div className="relative w-4 h-4 flex items-center justify-center">
+                        <div
+                          className="rounded-full"
+                          style={{
+                            width: `${12 * visual.size}px`,
+                            height: `${12 * visual.size}px`,
+                            backgroundColor: visual.color === 'warm' ? '#f59e0b' : visual.color === 'cold' ? '#64748b' : deckColor,
+                            opacity: visual.brightness,
+                          }}
+                        />
+                        {visual.coreWhite && (
+                          <div className="absolute w-1.5 h-1.5 bg-white rounded-full" />
+                        )}
+                      </div>
+                      <span className="text-slate-300 capitalize flex-1">
+                        {value.replace(/([A-Z])/g, ' $1')}
+                      </span>
+                      <span className="text-slate-500">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* SRS Legend */}
-      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+      {/* SRS Legend (desktop only) */}
+      <div className="hidden lg:block bg-slate-900/50 border border-slate-800 rounded-xl p-4">
         <h4 className="text-sm font-medium text-slate-400 mb-3">Star States</h4>
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(SRS_STATES).map(([key, value]) => {
