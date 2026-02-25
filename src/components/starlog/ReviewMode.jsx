@@ -118,7 +118,7 @@ export default function ReviewMode({
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-slate-950 z-[60] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-800">
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -364,7 +364,7 @@ function ReviewComplete({ results, onClose }) {
   const percentage = Math.round((correct / total) * 100);
 
   return (
-    <div className="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-950 z-[60] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
