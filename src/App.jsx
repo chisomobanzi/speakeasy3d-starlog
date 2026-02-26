@@ -23,6 +23,7 @@ import DeckDetailPage from './pages/DeckDetailPage';
 import CommunityPage from './pages/CommunityPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import ConstellationPage from './pages/ConstellationPage';
+import BridgePage from './pages/BridgePage';
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
@@ -84,6 +85,9 @@ function AppRoutes() {
       {/* Constellation view (fullscreen, no AppShell) */}
       <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
       <Route path="/constellation" element={<ConstellationPage defaultLanguage="sn" />} />
+
+      {/* Bridge Mode (fullscreen, no AppShell) */}
+      <Route path="/bridge" element={<BridgePage />} />
 
       {/* App routes with AppShell layout */}
       <Route element={<AppShell />}>

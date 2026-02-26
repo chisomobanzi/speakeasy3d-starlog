@@ -1,0 +1,175 @@
+/* ============================================================================
+   BRIDGE MODE — Design Tokens & Styles
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+.bridge-mode {
+  /* Colour Palette */
+  --bg-deep: #0A0E1A;
+  --bg-bridge: #141B2D;
+  --bg-panel: #1E293B;
+  --surface: #334155;
+
+  --amber: #F59E0B;
+  --amber-glow: #FCD34D;
+  --cyan: #06B6D4;
+  --cyan-glow: #67E8F9;
+
+  --fuel-cold: #3B82F6;
+  --fuel-warm: #F59E0B;
+  --fuel-hot: #FBBF24;
+  --fuel-max: #FEF3C7;
+
+  --encounter: #F97316;
+  --alert: #EF4444;
+  --success: #22C55E;
+
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-dim: #64748B;
+
+  /* Typography */
+  --font-display: 'Chakra Petch', sans-serif;
+  --font-body: 'Nunito', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Base setup */
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-deep);
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+
+/* Typography classes */
+.bridge-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.bridge-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+.bridge-body {
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+/* Scanline overlay */
+.bridge-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glow effects */
+.bridge-glow-amber {
+  box-shadow:
+    0 0 20px rgba(245, 158, 11, 0.3),
+    0 0 60px rgba(245, 158, 11, 0.1);
+}
+
+.bridge-glow-cyan {
+  box-shadow:
+    0 0 20px rgba(6, 182, 212, 0.3),
+    0 0 60px rgba(6, 182, 212, 0.1);
+}
+
+.bridge-text-glow-amber {
+  text-shadow:
+    0 0 10px rgba(245, 158, 11, 0.5),
+    0 0 30px rgba(245, 158, 11, 0.2);
+}
+
+.bridge-text-glow-cyan {
+  text-shadow:
+    0 0 10px rgba(6, 182, 212, 0.5),
+    0 0 30px rgba(6, 182, 212, 0.2);
+}
+
+/* Fuel gauge gradient */
+.fuel-gradient {
+  background: linear-gradient(
+    to top,
+    var(--fuel-cold) 0%,
+    var(--fuel-warm) 50%,
+    var(--fuel-hot) 80%,
+    var(--fuel-max) 100%
+  );
+}
+
+/* Ambient pulse animation */
+@keyframes bridge-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes bridge-pulse-slow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes fuel-particles {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-40px) scale(0); opacity: 0; }
+}
+
+.animate-bridge-pulse {
+  animation: bridge-pulse 2s ease-in-out infinite;
+}
+
+.animate-bridge-pulse-slow {
+  animation: bridge-pulse-slow 4s ease-in-out infinite;
+}
+
+/* Dialogue box */
+.dialogue-box {
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 14, 26, 0.85),
+    rgba(10, 14, 26, 0.95)
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-top: 2px solid var(--amber);
+}
+
+/* NPC portrait frame */
+.npc-portrait {
+  background: linear-gradient(135deg, var(--bg-panel), var(--bg-deep));
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+}
+
+/* Teacher panel */
+.teacher-panel {
+  background: rgba(10, 14, 26, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* Encounter flash */
+@keyframes encounter-flash {
+  0% { opacity: 0; }
+  10% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+.encounter-flash {
+  animation: encounter-flash 0.5s ease-out;
+}
