@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
@@ -17,6 +18,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    basicSsl(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
@@ -75,6 +77,14 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/ws': {
+        target: 'ws://localhost:8080',
+        ws: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': '/src',

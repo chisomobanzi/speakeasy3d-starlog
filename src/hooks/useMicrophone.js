@@ -102,12 +102,17 @@ export default function useMicrophone({ enabled = true, smoothing = 0.8 } = {}) 
     setIsConnected(false);
   }, []);
 
+  // Auto-start when enabled; cleanup only on unmount
   useEffect(() => {
     if (enabled) {
       start();
     }
+  }, [enabled, start]);
+
+  // Stop on unmount only
+  useEffect(() => {
     return () => stop();
-  }, [enabled, start, stop]);
+  }, [stop]);
 
   return { volume, isSpeaking, isConnected, error, start, stop };
 }

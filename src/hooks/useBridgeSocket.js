@@ -15,9 +15,8 @@ export default function useBridgeSocket(sessionCode) {
     if (!sessionCode) return;
 
     // Determine WS URL — same host as the page, port 8080
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const wsUrl = `${protocol}//${host}:8080`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
 
     try {
       const ws = new WebSocket(wsUrl);

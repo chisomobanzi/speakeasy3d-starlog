@@ -17,45 +17,15 @@ export default function ShipStatus() {
   const currentNode = starMapNodes.find((n) => n.id === currentNodeId);
   const echoCount = connectedDevices.length;
 
-  // Generate QR code pointing to /echo using the LAN IP
+  // Generate QR code pointing to /echo on the same host as the current page
   const [qrDataUrl, setQrDataUrl] = useState(null);
   useEffect(() => {
-    async function generateQR() {
-      const { protocol, port } = window.location;
-      let host = window.location.hostname;
-
-      // If opened via localhost, try to discover LAN IP via WebRTC
-      if (host === 'localhost' || host === '127.0.0.1') {
-        try {
-          const pc = new RTCPeerConnection({ iceServers: [] });
-          pc.createDataChannel('');
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          const ip = await new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(null), 2000);
-            pc.onicecandidate = (e) => {
-              if (!e.candidate) return;
-              const match = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
-              if (match && match[1] !== '0.0.0.0') {
-                clearTimeout(timeout);
-                resolve(match[1]);
-              }
-            };
-          });
-          pc.close();
-          if (ip) host = ip;
-        } catch {}
-      }
-
-      const echoUrl = `${protocol}//${host}${port ? ':' + port : ''}/echo`;
-      const dataUrl = await QRCode.toDataURL(echoUrl, {
-        width: 96,
-        margin: 1,
-        color: { dark: '#06B6D4', light: '#00000000' },
-      });
-      setQrDataUrl(dataUrl);
-    }
-    generateQR();
+    const echoUrl = `${window.location.origin}/echo`;
+    QRCode.toDataURL(echoUrl, {
+      width: 96,
+      margin: 1,
+      color: { dark: '#06B6D4', light: '#00000000' },
+    }).then(setQrDataUrl).catch(() => {});
   }, []);
 
   return (

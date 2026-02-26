@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import useMicrophone from '../hooks/useMicrophone';
 import '../styles/bridge.css';
 
 /**
  * Echo Page — Phone companion app.
  * Captures mic audio and sends volume data to Bridge via WebSocket.
- * Designed for mobile — simple, clear, big UI.
+ * Handles mic permissions directly (no hook) for mobile browser compatibility.
  */
 export default function EchoPage() {
   const [sessionCode, setSessionCode] = useState('');
@@ -15,13 +14,77 @@ export default function EchoPage() {
   const [fuelLevel, setFuelLevel] = useState(0);
   const [error, setError] = useState(null);
 
-  const wsRef = useRef(null);
-  const deviceIdRef = useRef(`echo-${Math.random().toString(36).slice(2, 8)}`);
+  // Mic state — managed directly, not via hook
+  const [micConnected, setMicConnected] = useState(false);
+  const [volume, setVolume] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Mic — only enable after joining
-  const { volume, isSpeaking, isConnected: micConnected, error: micError } = useMicrophone({
-    enabled: isJoined,
-  });
+  const wsRef = useRef(null);
+  const micRef = useRef({ stream: null, audioCtx: null, analyser: null, raf: null });
+  const deviceIdRef = useRef(`echo-${Math.random().toString(36).slice(2, 8)}`);
+  const lastSpeechRef = useRef(0);
+  const smoothedRef = useRef(0);
+
+  // Start mic — called directly from button tap (user gesture)
+  const enableMic = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // Resume context (required on some mobile browsers after user gesture)
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.8;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      micRef.current = { stream, audioCtx, analyser, raf: null };
+      setMicConnected(true);
+      setError(null);
+
+      // Start analysis loop
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(dataArray);
+
+        let sumSquares = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const normalized = (dataArray[i] - 128) / 128;
+          sumSquares += normalized * normalized;
+        }
+        const rms = Math.sqrt(sumSquares / dataArray.length);
+
+        smoothedRef.current = smoothedRef.current * 0.7 + rms * 0.3;
+        setVolume(smoothedRef.current);
+
+        const now = Date.now();
+        if (smoothedRef.current > 0.04) {
+          lastSpeechRef.current = now;
+          setIsSpeaking(true);
+        } else if (now - lastSpeechRef.current > 300) {
+          setIsSpeaking(false);
+        }
+
+        micRef.current.raf = requestAnimationFrame(tick);
+      };
+
+      micRef.current.raf = requestAnimationFrame(tick);
+    } catch (err) {
+      setError(`Mic error: ${err.message}`);
+      setMicConnected(false);
+    }
+  }, []);
 
   // Connect to WebSocket relay
   const joinSession = useCallback(() => {
@@ -33,9 +96,8 @@ export default function EchoPage() {
 
     setError(null);
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const wsUrl = `${protocol}//${host}:8080`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -72,10 +134,6 @@ export default function EchoPage() {
 
       ws.onclose = () => {
         setWsConnected(false);
-        if (isJoined) {
-          // Try to reconnect
-          setTimeout(() => joinSession(), 2000);
-        }
       };
 
       ws.onerror = () => {
@@ -85,7 +143,7 @@ export default function EchoPage() {
     } catch (err) {
       setError('Connection failed');
     }
-  }, [sessionCode, isJoined]);
+  }, [sessionCode]);
 
   // Send volume data to server at ~20fps
   useEffect(() => {
@@ -100,12 +158,12 @@ export default function EchoPage() {
           isSpeaking,
         }));
       }
-    }, 50); // 20fps
+    }, 50);
 
     return () => clearInterval(interval);
   }, [isJoined, volume, isSpeaking]);
 
-  // Local fuel visualization (mirrors what Bridge sees roughly)
+  // Local fuel visualization
   useEffect(() => {
     if (!isJoined) return;
     const interval = setInterval(() => {
@@ -121,6 +179,10 @@ export default function EchoPage() {
   useEffect(() => {
     return () => {
       if (wsRef.current) wsRef.current.close();
+      const mic = micRef.current;
+      if (mic.raf) cancelAnimationFrame(mic.raf);
+      if (mic.stream) mic.stream.getTracks().forEach((t) => t.stop());
+      if (mic.audioCtx) mic.audioCtx.close();
     };
   }, []);
 
@@ -133,7 +195,6 @@ export default function EchoPage() {
       <div className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
         style={{ background: 'var(--bg-deep)' }}
       >
-        {/* Logo / Title */}
         <div className="text-center mb-12">
           <div
             className="bridge-display text-4xl tracking-wider bridge-text-glow-cyan"
@@ -146,7 +207,6 @@ export default function EchoPage() {
           </div>
         </div>
 
-        {/* Session code input */}
         <div className="w-full max-w-xs">
           <label
             className="bridge-display text-xs tracking-[0.3em] block mb-3 text-center"
@@ -174,14 +234,12 @@ export default function EchoPage() {
           />
         </div>
 
-        {/* Error */}
-        {(error || micError) && (
+        {error && (
           <div className="mt-4 text-sm" style={{ color: 'var(--alert)' }}>
-            {error || micError}
+            {error}
           </div>
         )}
 
-        {/* Connect button */}
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={joinSession}
@@ -235,17 +293,47 @@ export default function EchoPage() {
         </div>
       </div>
 
-      {/* Fuel ring — big circular gauge */}
+      {/* Mic enable prompt — shown if mic not yet active */}
+      {!micConnected && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 10, background: 'var(--bg-deep)' }}>
+          <div className="text-center mb-8">
+            <div className="bridge-display text-2xl tracking-wider" style={{ color: 'var(--text-primary)' }}>
+              Microphone Required
+            </div>
+            <div className="bridge-body text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
+              Tap below to enable your microphone
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-6 text-sm px-4 text-center" style={{ color: 'var(--alert)' }}>
+              {error}
+            </div>
+          )}
+
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={enableMic}
+            className="px-12 py-5 rounded-2xl bridge-display text-2xl tracking-wider"
+            style={{
+              background: 'var(--amber)',
+              color: 'var(--bg-deep)',
+            }}
+          >
+            Enable Mic
+          </motion.button>
+        </div>
+      )}
+
+      {/* Fuel ring */}
       <div className="relative flex items-center justify-center" style={{ width: 240, height: 240 }}>
         <svg width="240" height="240" viewBox="0 0 240 240">
-          {/* Background ring */}
           <circle
             cx="120" cy="120" r="100"
             fill="none"
             stroke="rgba(30, 41, 59, 0.8)"
             strokeWidth="12"
           />
-          {/* Fuel ring */}
           <circle
             cx="120" cy="120" r="100"
             fill="none"
@@ -262,7 +350,6 @@ export default function EchoPage() {
           />
         </svg>
 
-        {/* Center content */}
         <div className="absolute text-center">
           <div
             className="bridge-display text-5xl"
