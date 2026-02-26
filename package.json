@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "bridge-server": "node server/index.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.117.0",
@@ -22,6 +23,7 @@
     "react-router-dom": "^6.20.0",
     "three": "^0.170.0",
     "uuid": "^9.0.0",
+    "ws": "^8.19.0",
     "zustand": "^4.4.0"
   },
   "devDependencies": {

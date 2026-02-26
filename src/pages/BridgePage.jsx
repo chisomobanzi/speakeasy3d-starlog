@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useBridgeStore, SCREENS } from '../stores/bridgeStore';
 import useMicrophone from '../hooks/useMicrophone';
+import useBridgeSocket from '../hooks/useBridgeSocket';
 import BridgeView from '../components/bridge/BridgeView';
 import StarMap from '../components/bridge/StarMap';
 import SceneView from '../components/bridge/SceneView';
@@ -13,6 +14,7 @@ import '../styles/bridge.css';
 /**
  * BridgePage — the main entry point for Bridge Mode.
  * Manages screen state, keyboard shortcuts, and the mic → fuel loop.
+ * Connects to WS relay to receive volume from Echo phone devices.
  */
 export default function BridgePage() {
   const currentScreen = useBridgeStore((s) => s.currentScreen);
@@ -24,20 +26,23 @@ export default function BridgePage() {
   const advanceBeat = useBridgeStore((s) => s.advanceBeat);
   const boostFuel = useBridgeStore((s) => s.boostFuel);
   const toggleFuelMute = useBridgeStore((s) => s.toggleFuelMute);
-  const fuelMuted = useBridgeStore((s) => s.fuelMuted);
   const setMicConnected = useBridgeStore((s) => s.setMicConnected);
   const encounterActive = useBridgeStore((s) => s.encounterActive);
+  const sessionCode = useBridgeStore((s) => s.sessionCode);
 
-  // Microphone
-  const { volume, isSpeaking, isConnected } = useMicrophone({ enabled: true });
+  // Local microphone (fallback when no Echo devices)
+  const { volume: localVolume, isSpeaking: localSpeaking, isConnected } = useMicrophone({ enabled: true });
   const lastTickRef = useRef(Date.now());
+
+  // WebSocket connection to relay server
+  const { connected: wsConnected } = useBridgeSocket(sessionCode);
 
   // Sync mic connection status
   useEffect(() => {
     setMicConnected(isConnected);
   }, [isConnected, setMicConnected]);
 
-  // Fuel loop — mic drives fuel level
+  // Fuel loop — combines local mic + remote echo volume
   useEffect(() => {
     if (encounterActive) return; // encounters handle their own fuel
 
@@ -53,9 +58,14 @@ export default function BridgePage() {
         return;
       }
 
-      if (isSpeaking) {
+      // Use remote echo volume if devices connected, otherwise local mic
+      const hasEchoDevices = store.connectedDevices.length > 0;
+      const activeVolume = hasEchoDevices ? store.remoteVolume : localVolume;
+      const activeSpeaking = hasEchoDevices ? store.remoteSpeaking : localSpeaking;
+
+      if (activeSpeaking) {
         // Fill rate: roughly 0→100 in ~30s of continuous speech
-        const fillRate = volume * 200 * delta;
+        const fillRate = activeVolume * 200 * delta;
         store.addFuel(fillRate);
         store.bankFuel();
       } else {
@@ -71,7 +81,7 @@ export default function BridgePage() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [isSpeaking, volume, encounterActive]);
+  }, [localSpeaking, localVolume, encounterActive]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e) => {

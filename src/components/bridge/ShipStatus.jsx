@@ -1,16 +1,62 @@
+import { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { useBridgeStore } from '../../stores/bridgeStore';
 import { demoCampaign, starMapNodes } from '../../data/demoCampaign';
 
 /**
- * Ship status display — ship name, destination, session info.
+ * Ship status display — ship name, destination, session code, connected devices.
  * Positioned in the top-left corner of the bridge.
  */
 export default function ShipStatus() {
   const currentNodeId = useBridgeStore((s) => s.currentNodeId);
   const micConnected = useBridgeStore((s) => s.micConnected);
   const sessionActive = useBridgeStore((s) => s.sessionActive);
+  const sessionCode = useBridgeStore((s) => s.sessionCode);
+  const connectedDevices = useBridgeStore((s) => s.connectedDevices);
 
   const currentNode = starMapNodes.find((n) => n.id === currentNodeId);
+  const echoCount = connectedDevices.length;
+
+  // Generate QR code pointing to /echo using the LAN IP
+  const [qrDataUrl, setQrDataUrl] = useState(null);
+  useEffect(() => {
+    async function generateQR() {
+      const { protocol, port } = window.location;
+      let host = window.location.hostname;
+
+      // If opened via localhost, try to discover LAN IP via WebRTC
+      if (host === 'localhost' || host === '127.0.0.1') {
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [] });
+          pc.createDataChannel('');
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          const ip = await new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(null), 2000);
+            pc.onicecandidate = (e) => {
+              if (!e.candidate) return;
+              const match = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+              if (match && match[1] !== '0.0.0.0') {
+                clearTimeout(timeout);
+                resolve(match[1]);
+              }
+            };
+          });
+          pc.close();
+          if (ip) host = ip;
+        } catch {}
+      }
+
+      const echoUrl = `${protocol}//${host}${port ? ':' + port : ''}/echo`;
+      const dataUrl = await QRCode.toDataURL(echoUrl, {
+        width: 96,
+        margin: 1,
+        color: { dark: '#06B6D4', light: '#00000000' },
+      });
+      setQrDataUrl(dataUrl);
+    }
+    generateQR();
+  }, []);
 
   return (
     <div className="flex flex-col gap-3" style={{ fontFamily: 'var(--font-display)' }}>
@@ -43,6 +89,32 @@ export default function ShipStatus() {
         </div>
       </div>
 
+      {/* Session code + QR — for phone pairing */}
+      <div className="flex items-start gap-3">
+        <div>
+          <div
+            className="text-xs tracking-[0.3em] uppercase"
+            style={{ color: 'var(--text-dim)' }}
+          >
+            Join Code
+          </div>
+          <div
+            className="text-2xl font-bold tracking-[0.4em] bridge-text-glow-cyan"
+            style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}
+          >
+            {sessionCode}
+          </div>
+        </div>
+        {qrDataUrl && (
+          <img
+            src={qrDataUrl}
+            alt="Scan to join"
+            className="rounded"
+            style={{ width: 64, height: 64 }}
+          />
+        )}
+      </div>
+
       {/* Crew / Class */}
       <div>
         <div
@@ -56,17 +128,21 @@ export default function ShipStatus() {
         </div>
       </div>
 
-      {/* Connection status */}
+      {/* Connected sensors */}
       <div className="flex items-center gap-2 mt-1">
         <div
           className="w-2 h-2 rounded-full"
           style={{
-            backgroundColor: micConnected ? 'var(--success)' : 'var(--text-dim)',
-            boxShadow: micConnected ? '0 0 6px var(--success)' : 'none',
+            backgroundColor: echoCount > 0 ? 'var(--success)' : micConnected ? 'var(--cyan)' : 'var(--text-dim)',
+            boxShadow: echoCount > 0 ? '0 0 6px var(--success)' : 'none',
           }}
         />
         <span className="text-xs" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-          {micConnected ? '1 sensor active' : 'No sensor'}
+          {echoCount > 0
+            ? `${echoCount} echo${echoCount > 1 ? 's' : ''} connected`
+            : micConnected
+              ? 'Local mic active'
+              : 'No sensor'}
         </span>
       </div>
 

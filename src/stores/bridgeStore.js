@@ -1,5 +1,14 @@
 import { create } from 'zustand';
 
+function generateSessionCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 for clarity
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 // Screen states for Bridge Mode
 export const SCREENS = {
   BRIDGE: 'bridge',
@@ -41,6 +50,12 @@ export const useBridgeStore = create((set, get) => ({
 
   // Mic
   micConnected: false,
+
+  // WebSocket / Echo devices
+  sessionCode: generateSessionCode(),
+  connectedDevices: [],   // [{ deviceId, name, joinedAt }]
+  remoteVolume: 0,        // Aggregated volume from all echo devices
+  remoteSpeaking: false,
 
   // --- Actions ---
 
@@ -125,6 +140,21 @@ export const useBridgeStore = create((set, get) => ({
 
   // Mic
   setMicConnected: (connected) => set({ micConnected: connected }),
+
+  // WebSocket / Echo devices
+  regenerateSessionCode: () => set({ sessionCode: generateSessionCode() }),
+  setConnectedDevices: (devices) => set({ connectedDevices: devices }),
+  addConnectedDevice: (device) => set((s) => ({
+    connectedDevices: [...s.connectedDevices, device],
+  })),
+  removeConnectedDevice: (deviceId) => set((s) => ({
+    connectedDevices: s.connectedDevices.filter((d) => d.deviceId !== deviceId),
+  })),
+  setRemoteVolume: (_deviceId, volume, isSpeaking) => {
+    // For now, just use the latest echo's volume (single-device prototype)
+    // In future: aggregate across devices
+    set({ remoteVolume: volume, remoteSpeaking: isSpeaking });
+  },
 
   // Reset
   reset: () => set({
