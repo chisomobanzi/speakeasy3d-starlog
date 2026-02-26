@@ -24,6 +24,8 @@ export default function EchoPage() {
   const deviceIdRef = useRef(`echo-${Math.random().toString(36).slice(2, 8)}`);
   const lastSpeechRef = useRef(0);
   const smoothedRef = useRef(0);
+  const volumeRef = useRef(0);
+  const isSpeakingRef = useRef(false);
 
   // Start mic — called directly from button tap (user gesture)
   const enableMic = useCallback(async () => {
@@ -66,13 +68,16 @@ export default function EchoPage() {
         const rms = Math.sqrt(sumSquares / dataArray.length);
 
         smoothedRef.current = smoothedRef.current * 0.7 + rms * 0.3;
+        volumeRef.current = smoothedRef.current;
         setVolume(smoothedRef.current);
 
         const now = Date.now();
         if (smoothedRef.current > 0.04) {
           lastSpeechRef.current = now;
+          isSpeakingRef.current = true;
           setIsSpeaking(true);
         } else if (now - lastSpeechRef.current > 300) {
+          isSpeakingRef.current = false;
           setIsSpeaking(false);
         }
 
@@ -145,35 +150,35 @@ export default function EchoPage() {
     }
   }, [sessionCode]);
 
-  // Send volume data to server at ~20fps
+  // Send volume data to server at ~20fps (use refs, not state, to avoid interval churn)
   useEffect(() => {
-    if (!isJoined || !wsRef.current) return;
+    if (!isJoined) return;
 
     const interval = setInterval(() => {
       const ws = wsRef.current;
       if (ws?.readyState === 1) {
         ws.send(JSON.stringify({
           type: 'volume',
-          volume,
-          isSpeaking,
+          volume: volumeRef.current,
+          isSpeaking: isSpeakingRef.current,
         }));
       }
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isJoined, volume, isSpeaking]);
+  }, [isJoined]);
 
-  // Local fuel visualization
+  // Local fuel visualization (use refs to avoid interval churn)
   useEffect(() => {
     if (!isJoined) return;
     const interval = setInterval(() => {
       setFuelLevel((f) => {
-        if (isSpeaking) return Math.min(100, f + volume * 8);
+        if (isSpeakingRef.current) return Math.min(100, f + volumeRef.current * 8);
         return Math.max(0, f - 0.5);
       });
     }, 50);
     return () => clearInterval(interval);
-  }, [isJoined, isSpeaking, volume]);
+  }, [isJoined]);
 
   // Cleanup
   useEffect(() => {
