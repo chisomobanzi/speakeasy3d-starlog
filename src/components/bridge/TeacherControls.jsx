@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, Map, MessageSquare, Swords,
   Plus, Minus, VolumeX, Volume2, Play, Square,
-  Maximize, ChevronRight, X,
+  Maximize, ChevronRight, X, Mic, MicOff,
 } from 'lucide-react';
 import { useBridgeStore, SCREENS } from '../../stores/bridgeStore';
 import { destinations, encounters } from '../../data/demoCampaign';
@@ -21,6 +21,8 @@ export default function TeacherControls() {
   const endSession = useBridgeStore((s) => s.endSession);
   const fuelMuted = useBridgeStore((s) => s.fuelMuted);
   const toggleFuelMute = useBridgeStore((s) => s.toggleFuelMute);
+  const localMicEnabled = useBridgeStore((s) => s.localMicEnabled);
+  const toggleLocalMic = useBridgeStore((s) => s.toggleLocalMic);
   const boostFuel = useBridgeStore((s) => s.boostFuel);
   const fuelLevel = useBridgeStore((s) => s.fuelLevel);
   const advanceBeat = useBridgeStore((s) => s.advanceBeat);
@@ -161,6 +163,21 @@ export default function TeacherControls() {
               {fuelMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
               {fuelMuted ? 'Unmute' : 'Mute'}
               <span className="bridge-mono text-xs" style={{ color: 'var(--text-dim)' }}>M</span>
+            </button>
+
+            {/* Local mic toggle */}
+            <button
+              onClick={toggleLocalMic}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+              style={{
+                background: localMicEnabled ? 'rgba(6, 182, 212, 0.15)' : 'rgba(30, 41, 59, 0.5)',
+                border: `1px solid ${localMicEnabled ? 'var(--cyan)' : 'rgba(148, 163, 184, 0.1)'}`,
+                color: localMicEnabled ? 'var(--cyan)' : 'var(--text-secondary)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              {localMicEnabled ? <Mic size={14} /> : <MicOff size={14} />}
+              Local Mic
             </button>
 
             {/* Fullscreen */}

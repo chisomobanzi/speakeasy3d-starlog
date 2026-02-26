@@ -30,8 +30,9 @@ export default function BridgePage() {
   const encounterActive = useBridgeStore((s) => s.encounterActive);
   const sessionCode = useBridgeStore((s) => s.sessionCode);
 
-  // Local microphone (fallback when no Echo devices)
-  const { volume: localVolume, isSpeaking: localSpeaking, isConnected } = useMicrophone({ enabled: true });
+  // Local microphone (off by default — use Echo devices instead)
+  const localMicEnabled = useBridgeStore((s) => s.localMicEnabled);
+  const { volume: localVolume, isSpeaking: localSpeaking, isConnected } = useMicrophone({ enabled: localMicEnabled });
   const lastTickRef = useRef(Date.now());
 
   // WebSocket connection to relay server
@@ -58,10 +59,11 @@ export default function BridgePage() {
         return;
       }
 
-      // Use remote echo volume if devices connected, otherwise local mic
-      const hasEchoDevices = store.connectedDevices.length > 0;
-      const activeVolume = hasEchoDevices ? store.remoteVolume : localVolume;
-      const activeSpeaking = hasEchoDevices ? store.remoteSpeaking : localSpeaking;
+      // Combine remote echo volume + local mic (if enabled)
+      const hasEcho = store.connectedDevices.length > 0;
+      const useLocal = store.localMicEnabled;
+      const activeVolume = hasEcho ? store.remoteVolume : useLocal ? localVolume : 0;
+      const activeSpeaking = hasEcho ? store.remoteSpeaking : useLocal ? localSpeaking : false;
 
       if (activeSpeaking) {
         // Fill rate: roughly 0→100 in ~30s of continuous speech

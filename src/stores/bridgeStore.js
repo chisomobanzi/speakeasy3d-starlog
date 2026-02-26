@@ -49,6 +49,7 @@ export const useBridgeStore = create((set, get) => ({
   teacherPanelOpen: false,
 
   // Mic
+  localMicEnabled: false, // Off by default — use Echo devices
   micConnected: false,
 
   // WebSocket / Echo devices
@@ -139,6 +140,7 @@ export const useBridgeStore = create((set, get) => ({
   toggleTeacherPanel: () => set((s) => ({ teacherPanelOpen: !s.teacherPanelOpen })),
 
   // Mic
+  toggleLocalMic: () => set((s) => ({ localMicEnabled: !s.localMicEnabled })),
   setMicConnected: (connected) => set({ micConnected: connected }),
 
   // WebSocket / Echo devices
