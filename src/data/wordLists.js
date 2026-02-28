@@ -159,51 +159,52 @@ export const wordLists = {
   ],
 
   ja: [
-    // Difficulty 1 — basic words/phrases (1 point)
-    { word: 'こんにちは', hint: 'kon-ni-chi-wa', difficulty: 1, points: 1 },
-    { word: 'ありがとう', hint: 'a-ri-ga-tō', difficulty: 1, points: 1 },
-    { word: 'さようなら', hint: 'sa-yō-na-ra', difficulty: 1, points: 1 },
-    { word: 'ねこ', hint: 'ne-ko', difficulty: 1, points: 1 },
-    { word: 'いぬ', hint: 'i-nu', difficulty: 1, points: 1 },
-    { word: 'みず', hint: 'mi-zu', difficulty: 1, points: 1 },
-    { word: 'やま', hint: 'ya-ma', difficulty: 1, points: 1 },
-    { word: 'はな', hint: 'ha-na', difficulty: 1, points: 1 },
-    { word: 'そら', hint: 'so-ra', difficulty: 1, points: 1 },
-    { word: 'あか', hint: 'a-ka', difficulty: 1, points: 1 },
-    { word: 'あお', hint: 'a-o', difficulty: 1, points: 1 },
-    { word: 'ひ', hint: 'hi', difficulty: 1, points: 1 },
-    { word: 'つき', hint: 'tsu-ki', difficulty: 1, points: 1 },
-    { word: 'ほし', hint: 'ho-shi', difficulty: 1, points: 1 },
-    { word: 'さかな', hint: 'sa-ka-na', difficulty: 1, points: 1 },
-    { word: 'たべる', hint: 'ta-be-ru', difficulty: 1, points: 1 },
-    { word: 'のむ', hint: 'no-mu', difficulty: 1, points: 1 },
-    { word: 'おおきい', hint: 'ō-kī', difficulty: 1, points: 1 },
-    { word: 'ちいさい', hint: 'chī-sai', difficulty: 1, points: 1 },
-    { word: 'いち', hint: 'i-chi', difficulty: 1, points: 1 },
+    // Difficulty 1 — basic words (1 point)
+    // word = kanji/common form (what ASR returns), alt = hiragana (also accepted)
+    { word: 'こんにちは', alt: [], hint: 'kon-ni-chi-wa', difficulty: 1, points: 1 },
+    { word: 'ありがとう', alt: [], hint: 'a-ri-ga-tō', difficulty: 1, points: 1 },
+    { word: 'さようなら', alt: [], hint: 'sa-yō-na-ra', difficulty: 1, points: 1 },
+    { word: '猫', alt: ['ねこ','ネコ'], hint: 'ねこ neko', difficulty: 1, points: 1 },
+    { word: '犬', alt: ['いぬ','イヌ'], hint: 'いぬ inu', difficulty: 1, points: 1 },
+    { word: '水', alt: ['みず'], hint: 'みず mizu', difficulty: 1, points: 1 },
+    { word: '山', alt: ['やま'], hint: 'やま yama', difficulty: 1, points: 1 },
+    { word: '花', alt: ['はな'], hint: 'はな hana', difficulty: 1, points: 1 },
+    { word: '空', alt: ['そら'], hint: 'そら sora', difficulty: 1, points: 1 },
+    { word: '赤', alt: ['あか'], hint: 'あか aka', difficulty: 1, points: 1 },
+    { word: '青', alt: ['あお'], hint: 'あお ao', difficulty: 1, points: 1 },
+    { word: '火', alt: ['ひ'], hint: 'ひ hi', difficulty: 1, points: 1 },
+    { word: '月', alt: ['つき'], hint: 'つき tsuki', difficulty: 1, points: 1 },
+    { word: '星', alt: ['ほし'], hint: 'ほし hoshi', difficulty: 1, points: 1 },
+    { word: '魚', alt: ['さかな'], hint: 'さかな sakana', difficulty: 1, points: 1 },
+    { word: '食べる', alt: ['たべる'], hint: 'たべる taberu', difficulty: 1, points: 1 },
+    { word: '飲む', alt: ['のむ'], hint: 'のむ nomu', difficulty: 1, points: 1 },
+    { word: '大きい', alt: ['おおきい'], hint: 'おおきい ōkī', difficulty: 1, points: 1 },
+    { word: '小さい', alt: ['ちいさい'], hint: 'ちいさい chīsai', difficulty: 1, points: 1 },
+    { word: '一', alt: ['いち'], hint: 'いち ichi', difficulty: 1, points: 1 },
 
     // Difficulty 2 — compound words (2 points)
-    { word: 'ともだち', hint: 'to-mo-da-chi', difficulty: 2, points: 2 },
-    { word: 'せんせい', hint: 'sen-sē', difficulty: 2, points: 2 },
-    { word: 'がっこう', hint: 'gak-kō', difficulty: 2, points: 2 },
-    { word: 'でんしゃ', hint: 'den-sha', difficulty: 2, points: 2 },
-    { word: 'おんがく', hint: 'on-ga-ku', difficulty: 2, points: 2 },
-    { word: 'しごと', hint: 'shi-go-to', difficulty: 2, points: 2 },
-    { word: 'かぞく', hint: 'ka-zo-ku', difficulty: 2, points: 2 },
-    { word: 'たのしい', hint: 'ta-no-shī', difficulty: 2, points: 2 },
-    { word: 'うつくしい', hint: 'u-tsu-ku-shī', difficulty: 2, points: 2 },
-    { word: 'おいしい', hint: 'o-i-shī', difficulty: 2, points: 2 },
-    { word: 'べんきょう', hint: 'ben-kyō', difficulty: 2, points: 2 },
-    { word: 'にほんご', hint: 'ni-hon-go', difficulty: 2, points: 2 },
+    { word: '友達', alt: ['ともだち'], hint: 'ともだち tomodachi', difficulty: 2, points: 2 },
+    { word: '先生', alt: ['せんせい'], hint: 'せんせい sensē', difficulty: 2, points: 2 },
+    { word: '学校', alt: ['がっこう'], hint: 'がっこう gakkō', difficulty: 2, points: 2 },
+    { word: '電車', alt: ['でんしゃ'], hint: 'でんしゃ densha', difficulty: 2, points: 2 },
+    { word: '音楽', alt: ['おんがく'], hint: 'おんがく ongaku', difficulty: 2, points: 2 },
+    { word: '仕事', alt: ['しごと'], hint: 'しごと shigoto', difficulty: 2, points: 2 },
+    { word: '家族', alt: ['かぞく'], hint: 'かぞく kazoku', difficulty: 2, points: 2 },
+    { word: '楽しい', alt: ['たのしい'], hint: 'たのしい tanoshī', difficulty: 2, points: 2 },
+    { word: '美しい', alt: ['うつくしい'], hint: 'うつくしい utsukushī', difficulty: 2, points: 2 },
+    { word: 'おいしい', alt: ['美味しい'], hint: 'oishī', difficulty: 2, points: 2 },
+    { word: '勉強', alt: ['べんきょう'], hint: 'べんきょう benkyō', difficulty: 2, points: 2 },
+    { word: '日本語', alt: ['にほんご'], hint: 'にほんご nihongo', difficulty: 2, points: 2 },
 
     // Difficulty 3 — advanced (3 points)
-    { word: 'としょかん', hint: 'to-sho-kan', difficulty: 3, points: 3 },
-    { word: 'びょういん', hint: 'byō-in', difficulty: 3, points: 3 },
-    { word: 'しんかんせん', hint: 'shin-kan-sen', difficulty: 3, points: 3 },
-    { word: 'おめでとう', hint: 'o-me-de-tō', difficulty: 3, points: 3 },
-    { word: 'けいけん', hint: 'kē-ken', difficulty: 3, points: 3 },
-    { word: 'かんきょう', hint: 'kan-kyō', difficulty: 3, points: 3 },
-    { word: 'すばらしい', hint: 'su-ba-ra-shī', difficulty: 3, points: 3 },
-    { word: 'ちょうせん', hint: 'chō-sen', difficulty: 3, points: 3 },
+    { word: '図書館', alt: ['としょかん'], hint: 'としょかん toshokan', difficulty: 3, points: 3 },
+    { word: '病院', alt: ['びょういん'], hint: 'びょういん byōin', difficulty: 3, points: 3 },
+    { word: '新幹線', alt: ['しんかんせん'], hint: 'しんかんせん shinkansen', difficulty: 3, points: 3 },
+    { word: 'おめでとう', alt: [], hint: 'omedetō', difficulty: 3, points: 3 },
+    { word: '経験', alt: ['けいけん'], hint: 'けいけん kēken', difficulty: 3, points: 3 },
+    { word: '環境', alt: ['かんきょう'], hint: 'かんきょう kankyō', difficulty: 3, points: 3 },
+    { word: '素晴らしい', alt: ['すばらしい'], hint: 'すばらしい subarashī', difficulty: 3, points: 3 },
+    { word: '挑戦', alt: ['ちょうせん'], hint: 'ちょうせん chōsen', difficulty: 3, points: 3 },
   ],
 
   fr: [
@@ -329,18 +330,25 @@ export function getWordQueue(lang) {
 
 /**
  * Check if a speech transcript matches a target word.
+ * targetWord can be a string or a word entry object (with .word and optional .alt array).
  */
 export function matchesWord(transcript, targetWord, lang) {
   const t = transcript.toLowerCase().trim();
-  const w = targetWord.toLowerCase().trim();
+
+  // Build list of accepted forms
+  const primary = typeof targetWord === 'string' ? targetWord : targetWord.word;
+  const alts = (typeof targetWord === 'object' && targetWord.alt) || [];
+  const candidates = [primary, ...alts];
 
   if (lang === 'zh' || lang === 'ja') {
-    // CJK: check if target characters appear in transcript
-    return t.includes(w);
+    // CJK: check if any accepted form appears in transcript
+    return candidates.some((c) => t.includes(c.toLowerCase()));
   }
 
   // Alphabetic languages: check if word appears in transcript
-  // Also check individual words in transcript
-  if (t.includes(w)) return true;
-  return t.split(/\s+/).some((word) => word === w);
+  const words = t.split(/\s+/);
+  return candidates.some((c) => {
+    const w = c.toLowerCase();
+    return t.includes(w) || words.some((word) => word === w);
+  });
 }

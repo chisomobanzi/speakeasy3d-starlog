@@ -466,12 +466,12 @@ export default function EchoPage() {
     }
 
     let restartCount = 0;
+    let lastHeard = '';
 
     // Self-contained: creates a fresh instance, onend calls itself
     const spawn = () => {
       if (phaseRef.current !== 'playing') return;
       restartCount++;
-      setAsrDebug(`ASR #${restartCount} starting...`);
 
       try {
         const recognition = new SR();
@@ -481,15 +481,16 @@ export default function EchoPage() {
         recognition.maxAlternatives = 3;
 
         recognition.onresult = (event) => {
-          const target = currentWordRef.current?.word;
-          if (!target) return;
+          const wordEntry = currentWordRef.current;
+          if (!wordEntry?.word) return;
           // Only check the LATEST result — older results accumulate stale transcripts
           const latest = event.results[event.results.length - 1];
           if (!latest) return;
           for (let j = 0; j < latest.length; j++) {
             const transcript = latest[j].transcript;
-            setAsrDebug(`heard: "${transcript.slice(0, 30)}" want: "${target}"`);
-            if (matchesWord(transcript, target, languageRef.current)) {
+            lastHeard = transcript.slice(0, 30);
+            setAsrDebug(`#${restartCount} "${lastHeard}" → ${wordEntry.word}`);
+            if (matchesWord(transcript, wordEntry, languageRef.current)) {
               advanceWord();
               return;
             }
@@ -497,25 +498,25 @@ export default function EchoPage() {
         };
 
         recognition.onerror = (e) => {
-          setAsrDebug(`ASR error: ${e.error}`);
           if (e.error === 'not-allowed' || e.error === 'service-not-available') {
+            setAsrDebug(`ASR: ${e.error}`);
             setUseTapMode(true);
           }
           // onend fires after this
         };
 
         recognition.onend = () => {
-          setAsrDebug(`ASR ended, restarting...`);
           recognitionRef.current = null;
-          // Respawn fresh instance
+          // Respawn fresh instance — keep last heard visible
           if (phaseRef.current === 'playing') {
+            setAsrDebug(`#${restartCount} "${lastHeard}" ↻`);
             setTimeout(spawn, 150);
           }
         };
 
         recognition.start();
         recognitionRef.current = recognition;
-        setAsrDebug(`ASR #${restartCount} listening (${recognition.lang})`);
+        if (!lastHeard) setAsrDebug(`#${restartCount} listening (${recognition.lang})`);
       } catch (err) {
         setAsrDebug(`ASR spawn failed: ${err.message}`);
         setUseTapMode(true);
