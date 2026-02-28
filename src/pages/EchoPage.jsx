@@ -474,6 +474,9 @@ export default function EchoPage() {
             const transcript = event.results[i][j].transcript;
             if (matchesWord(transcript, target, languageRef.current)) {
               advanceWord();
+              // Abort and restart for a clean recognition session on the next word.
+              // Especially important for CJK languages where context changes per word.
+              try { recognition.abort(); } catch {}
               return;
             }
           }
@@ -485,15 +488,21 @@ export default function EchoPage() {
           setUseTapMode(true);
           return;
         }
-        if (phaseRef.current === 'playing') {
-          try { recognition.start(); } catch {}
-        }
+        // Delay restart — browser needs time to clean up the previous session
+        setTimeout(() => {
+          if (phaseRef.current === 'playing') {
+            try { recognition.start(); } catch {}
+          }
+        }, 150);
       };
 
       recognition.onend = () => {
-        if (phaseRef.current === 'playing') {
-          try { recognition.start(); } catch {}
-        }
+        // Delay restart — avoids "already started" errors on some browsers
+        setTimeout(() => {
+          if (phaseRef.current === 'playing') {
+            try { recognition.start(); } catch {}
+          }
+        }, 150);
       };
 
       recognition.start();
