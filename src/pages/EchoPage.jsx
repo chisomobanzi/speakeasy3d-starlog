@@ -63,10 +63,6 @@ export default function EchoPage() {
   // ─── Audio visualization ───
   const [micVolume, setMicVolume] = useState(0); // 0–1
   const [rewardFlash, setRewardFlash] = useState(false);
-  const micStreamRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const analyserRef = useRef(null);
-  const micRafRef = useRef(null);
 
   // ─── Refs ───
   const wsRef = useRef(null);
@@ -497,6 +493,11 @@ export default function EchoPage() {
           }
         };
 
+        // Drive blue pulse from speech detection (no getUserMedia needed)
+        recognition.onspeechstart = () => setMicVolume(0.8);
+        recognition.onspeechend = () => setMicVolume(0);
+        recognition.onaudiostart = () => { if (!micVolume) setMicVolume(0.1); };
+
         recognition.onerror = (e) => {
           if (e.error === 'not-allowed' || e.error === 'service-not-available') {
             setAsrDebug(`ASR: ${e.error}`);
@@ -537,7 +538,7 @@ export default function EchoPage() {
     setAsrDebug('');
   }, []);
 
-  // Start recognition + timer + mic visualizer when playing phase begins
+  // Start recognition + timer when playing phase begins
   useEffect(() => {
     if (phase !== 'playing') return;
     if (!useTapMode) startRecognition();
@@ -546,50 +547,12 @@ export default function EchoPage() {
       setRoundTimeLeft((v) => Math.max(0, v - 1));
     }, 1000);
 
-    // ─── Mic amplitude visualization ───
-    let cancelled = false;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
-        micStreamRef.current = stream;
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        audioCtxRef.current = ctx;
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.7;
-        source.connect(analyser);
-        analyserRef.current = analyser;
-        const data = new Uint8Array(analyser.frequencyBinCount);
-
-        const tick = () => {
-          if (cancelled) return;
-          analyser.getByteFrequencyData(data);
-          // Average of lower frequencies (voice range)
-          let sum = 0;
-          const bins = Math.min(64, data.length);
-          for (let i = 0; i < bins; i++) sum += data[i];
-          const avg = sum / bins / 255; // 0–1
-          setMicVolume(avg);
-          micRafRef.current = requestAnimationFrame(tick);
-        };
-        micRafRef.current = requestAnimationFrame(tick);
-      } catch {
-        // No mic access — visualization just stays dark
-      }
-    })();
-
     return () => {
-      cancelled = true;
       stopRecognition();
       if (roundTimerRef.current) {
         clearInterval(roundTimerRef.current);
         roundTimerRef.current = null;
       }
-      if (micRafRef.current) cancelAnimationFrame(micRafRef.current);
-      if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; }
-      if (micStreamRef.current) { micStreamRef.current.getTracks().forEach((t) => t.stop()); micStreamRef.current = null; }
       setMicVolume(0);
     };
   }, [phase, useTapMode, startRecognition, stopRecognition]);
