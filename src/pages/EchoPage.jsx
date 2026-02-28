@@ -452,8 +452,9 @@ export default function EchoPage() {
   }, []);
 
   // ─── Speech Recognition ───
-  // Kill existing recognition without triggering restart (like killWs pattern)
-  const killRecognition = useCallback(() => {
+  // Create a fresh SpeechRecognition instance. onend always respawns a new one.
+  const startRecognition = useCallback(() => {
+    // Clean up any existing instance
     if (recognitionRef.current) {
       recognitionRef.current.onresult = null;
       recognitionRef.current.onend = null;
@@ -461,11 +462,6 @@ export default function EchoPage() {
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
     }
-  }, []);
-
-  // Create a brand-new SpeechRecognition instance each time
-  const startRecognition = useCallback(() => {
-    killRecognition();
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setUseTapMode(true); return; }
@@ -486,14 +482,8 @@ export default function EchoPage() {
             const transcript = event.results[i][j].transcript;
             if (matchesWord(transcript, target, languageRef.current)) {
               advanceWord();
-              // Kill this instance — onend on the NEW instance (via startRecognitionRef)
-              // will spin up a fresh one for the next word
-              killRecognition();
-              setTimeout(() => {
-                if (phaseRef.current === 'playing') {
-                  startRecognitionRef.current?.();
-                }
-              }, 200);
+              // Graceful stop — onend will create a fresh instance for next word
+              try { recognition.stop(); } catch {}
               return;
             }
           }
@@ -504,17 +494,19 @@ export default function EchoPage() {
         if (e.error === 'not-allowed' || e.error === 'service-not-available') {
           setUseTapMode(true);
         }
-        // onend fires after onerror — let it handle restart
+        // onend fires after onerror — it handles restart
       };
 
       recognition.onend = () => {
         recognitionRef.current = null;
-        // Spin up a fresh instance after a delay
-        setTimeout(() => {
-          if (phaseRef.current === 'playing') {
-            startRecognitionRef.current?.();
-          }
-        }, 200);
+        // Respawn a fresh instance after a short delay
+        if (phaseRef.current === 'playing') {
+          setTimeout(() => {
+            if (phaseRef.current === 'playing') {
+              startRecognitionRef.current?.();
+            }
+          }, 150);
+        }
       };
 
       recognition.start();
@@ -522,11 +514,19 @@ export default function EchoPage() {
     } catch {
       setUseTapMode(true);
     }
-  }, [advanceWord, killRecognition]);
+  }, [advanceWord]);
 
   useEffect(() => { startRecognitionRef.current = startRecognition; }, [startRecognition]);
 
-  const stopRecognition = killRecognition;
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onend = null;
+      recognitionRef.current.onerror = null;
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+  }, []);
 
   // Start recognition + timer + mic visualizer when playing phase begins
   useEffect(() => {
