@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { useBridgeStore } from '../../stores/bridgeStore';
 import { demoCampaign, starMapNodes } from '../../data/demoCampaign';
+import { t, echosConnected } from '../../data/i18n';
 
 /**
  * Ship status display — ship name, destination, session code, connected devices.
@@ -36,7 +37,7 @@ export default function ShipStatus() {
           className="text-xs tracking-[0.3em] uppercase"
           style={{ color: 'var(--text-dim)' }}
         >
-          Vessel
+          {t.vessel}
         </div>
         <div
           className="text-lg font-bold tracking-wide bridge-text-glow-amber"
@@ -52,7 +53,7 @@ export default function ShipStatus() {
           className="text-xs tracking-[0.3em] uppercase"
           style={{ color: 'var(--text-dim)' }}
         >
-          Destination
+          {t.destination}
         </div>
         <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
           {currentNode?.label || '—'}
@@ -66,7 +67,7 @@ export default function ShipStatus() {
             className="text-xs tracking-[0.3em] uppercase"
             style={{ color: 'var(--text-dim)' }}
           >
-            Join Code
+            {t.joinCode}
           </div>
           <div
             className="text-2xl font-bold tracking-[0.4em] bridge-text-glow-cyan"
@@ -91,7 +92,7 @@ export default function ShipStatus() {
           className="text-xs tracking-[0.3em] uppercase"
           style={{ color: 'var(--text-dim)' }}
         >
-          Crew
+          {t.crew}
         </div>
         <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           {demoCampaign.className}
@@ -109,10 +110,10 @@ export default function ShipStatus() {
         />
         <span className="text-xs" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
           {echoCount > 0
-            ? `${echoCount} echo${echoCount > 1 ? 's' : ''} connected`
+            ? echosConnected(echoCount)
             : micConnected
-              ? 'Local mic active'
-              : 'No sensor'}
+              ? t.localMicActive
+              : t.noSensor}
         </span>
       </div>
 
@@ -124,7 +125,7 @@ export default function ShipStatus() {
             style={{ backgroundColor: 'var(--amber)' }}
           />
           <span className="text-xs" style={{ color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>
-            Session active
+            {t.sessionActive}
           </span>
         </div>
       )}

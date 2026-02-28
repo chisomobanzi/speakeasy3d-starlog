@@ -1,104 +1,196 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LANGUAGES, getWordQueue, matchesWord } from '../data/wordLists';
+import { t } from '../data/i18n';
 import '../styles/bridge.css';
 
+// ─── LocalStorage helpers ───
+const STORAGE_KEY = 'starlog_echo';
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}
+
 /**
- * Echo Page — Phone companion app.
- * Captures mic audio and sends volume data to Bridge via WebSocket.
- * Handles mic permissions directly (no hook) for mobile browser compatibility.
+ * EchoPage — Phone companion for Bridge Mode games.
+ *
+ * Flow: Enter code → Enter name → Pick language → Lobby → Game rounds
+ *
+ * Persists session info in localStorage so phones can reconnect after
+ * sleeping or accidental page reloads.
  */
 export default function EchoPage() {
+  // ─── Connection state ───
+  const [phase, setPhase] = useState('join'); // join | profile | lobby | playing | roundEnd
   const [sessionCode, setSessionCode] = useState('');
-  const [isJoined, setIsJoined] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [language, setLanguage] = useState(null);
+  const [team, setTeam] = useState(null);
+  const [teamInfo, setTeamInfo] = useState(null); // { name, color }
   const [wsConnected, setWsConnected] = useState(false);
-  const [fuelLevel, setFuelLevel] = useState(0);
   const [error, setError] = useState(null);
+  const [reconnecting, setReconnecting] = useState(false);
 
-  // Mic state — managed directly, not via hook
-  const [micConnected, setMicConnected] = useState(false);
-  const [volume, setVolume] = useState(0);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  // ─── Game state ───
+  const [currentWord, setCurrentWord] = useState(null);
+  const [wordIndex, setWordIndex] = useState(0);
+  const [wordsCompleted, setWordsCompleted] = useState(0);
+  const [personalScore, setPersonalScore] = useState(0);
+  const [roundTimeLeft, setRoundTimeLeft] = useState(60);
+  const [lastScored, setLastScored] = useState(null);
+  const [useTapMode, setUseTapMode] = useState(false);
+  const [roundNumber, setRoundNumber] = useState(0);
+  const [roundWinner, setRoundWinner] = useState(null);
 
+  // ─── Refs ───
   const wsRef = useRef(null);
-  const micRef = useRef({ stream: null, audioCtx: null, analyser: null, raf: null });
-  const deviceIdRef = useRef(`echo-${Math.random().toString(36).slice(2, 8)}`);
-  const lastSpeechRef = useRef(0);
-  const smoothedRef = useRef(0);
-  const volumeRef = useRef(0);
-  const isSpeakingRef = useRef(false);
+  const deviceIdRef = useRef(null);
+  const wordQueueRef = useRef([]);
+  const currentWordRef = useRef(null);
+  const phaseRef = useRef('join');
+  const recognitionRef = useRef(null);
+  const teamRef = useRef(null);
+  const roundTimerRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+  const sessionCodeRef = useRef('');
+  const playerNameRef = useRef('');
+  const languageRef = useRef(null);
+  const isJoinedRef = useRef(false);
 
-  // Start mic — called directly from button tap (user gesture)
-  const enableMic = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+  // Keep refs in sync
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { teamRef.current = team; }, [team]);
+  useEffect(() => { sessionCodeRef.current = sessionCode; }, [sessionCode]);
+  useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
+  useEffect(() => { languageRef.current = language; }, [language]);
+  const handleMessageRef = useRef(null);
 
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      // Resume context (required on some mobile browsers after user gesture)
-      if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-      }
+  // ─── Initialize deviceId (stable across sessions) ───
+  useEffect(() => {
+    const saved = loadSaved();
+    if (saved?.deviceId) {
+      deviceIdRef.current = saved.deviceId;
+    } else {
+      deviceIdRef.current = `echo-${Math.random().toString(36).slice(2, 8)}`;
+    }
 
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.8;
-
-      const source = audioCtx.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      micRef.current = { stream, audioCtx, analyser, raf: null };
-      setMicConnected(true);
-      setError(null);
-
-      // Start analysis loop
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const tick = () => {
-        analyser.getByteTimeDomainData(dataArray);
-
-        let sumSquares = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          const normalized = (dataArray[i] - 128) / 128;
-          sumSquares += normalized * normalized;
-        }
-        const rms = Math.sqrt(sumSquares / dataArray.length);
-
-        smoothedRef.current = smoothedRef.current * 0.7 + rms * 0.3;
-        volumeRef.current = smoothedRef.current;
-        setVolume(smoothedRef.current);
-
-        const now = Date.now();
-        if (smoothedRef.current > 0.04) {
-          lastSpeechRef.current = now;
-          isSpeakingRef.current = true;
-          setIsSpeaking(true);
-        } else if (now - lastSpeechRef.current > 300) {
-          isSpeakingRef.current = false;
-          setIsSpeaking(false);
-        }
-
-        micRef.current.raf = requestAnimationFrame(tick);
-      };
-
-      micRef.current.raf = requestAnimationFrame(tick);
-    } catch (err) {
-      setError(`Mic error: ${err.message}`);
-      setMicConnected(false);
+    // Auto-restore saved session
+    if (saved?.sessionCode && saved?.playerName && saved?.language) {
+      setSessionCode(saved.sessionCode);
+      setPlayerName(saved.playerName);
+      setLanguage(saved.language);
+      if (saved.team) setTeam(saved.team);
+      if (saved.teamInfo) setTeamInfo(saved.teamInfo);
+      setReconnecting(true);
     }
   }, []);
 
-  // Connect to WebSocket relay
+  // ─── Auto-reconnect on restore ───
+  useEffect(() => {
+    if (!reconnecting) return;
+    if (!sessionCode || !playerName || !language) return;
+    const timer = setTimeout(() => {
+      connectAndJoin();
+      setReconnecting(false);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reconnecting, sessionCode, playerName, language]);
+
+  // ─── Connect WebSocket + send join ───
+  const connectAndJoin = useCallback(() => {
+    const code = sessionCodeRef.current.trim().toUpperCase();
+    const name = playerNameRef.current.trim();
+    const lang = languageRef.current;
+    if (!code || code.length < 4) return;
+
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
+    }
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setWsConnected(true);
+        setError(null);
+        if (name && lang) {
+          ws.send(JSON.stringify({
+            type: 'join',
+            role: 'echo',
+            code,
+            deviceId: deviceIdRef.current,
+            name,
+            language: lang,
+          }));
+          isJoinedRef.current = true;
+          if (phaseRef.current === 'join' || phaseRef.current === 'profile') {
+            setPhase('lobby');
+          }
+        } else {
+          setPhase('profile');
+        }
+      };
+
+      ws.onmessage = (event) => {
+        let msg;
+        try { msg = JSON.parse(event.data); } catch { return; }
+        if (handleMessageRef.current) handleMessageRef.current(msg);
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        isJoinedRef.current = false;
+        if (sessionCodeRef.current && playerNameRef.current && languageRef.current) {
+          reconnectTimerRef.current = setTimeout(() => {
+            connectAndJoin();
+          }, 2000);
+        }
+      };
+
+      ws.onerror = () => {
+        setError(t.cannotConnect);
+        setWsConnected(false);
+      };
+    } catch {
+      setError(t.connectionFailed);
+    }
+  }, []);
+
+  // ─── Initial join (from join screen) ───
   const joinSession = useCallback(() => {
     const code = sessionCode.trim().toUpperCase();
     if (code.length < 4) {
-      setError('Enter a 4-character session code');
+      setError(t.enterCode);
       return;
     }
-
     setError(null);
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -110,114 +202,352 @@ export default function EchoPage() {
 
       ws.onopen = () => {
         setWsConnected(true);
-        ws.send(JSON.stringify({
-          type: 'join',
-          role: 'echo',
-          code,
-          deviceId: deviceIdRef.current,
-          name: 'Phone Echo',
-        }));
+        setPhase('profile');
       };
 
       ws.onmessage = (event) => {
         let msg;
-        try {
-          msg = JSON.parse(event.data);
-        } catch {
-          return;
-        }
-        if (msg.type === 'joined') {
-          setIsJoined(true);
-        }
-        if (msg.type === 'fuel_boost') {
-          setFuelLevel((f) => Math.min(100, f + (msg.amount || 10)));
-        }
-        if (msg.type === 'error') {
-          setError(msg.message);
-        }
+        try { msg = JSON.parse(event.data); } catch { return; }
+        if (handleMessageRef.current) handleMessageRef.current(msg);
       };
 
       ws.onclose = () => {
         setWsConnected(false);
+        isJoinedRef.current = false;
+        if (sessionCodeRef.current && playerNameRef.current && languageRef.current) {
+          reconnectTimerRef.current = setTimeout(() => {
+            connectAndJoin();
+          }, 2000);
+        }
       };
 
       ws.onerror = () => {
-        setError('Cannot connect to server');
+        setError(t.cannotConnect);
         setWsConnected(false);
       };
-    } catch (err) {
-      setError('Connection failed');
+    } catch {
+      setError(t.connectionFailed);
     }
-  }, [sessionCode]);
+  }, [sessionCode, connectAndJoin]);
 
-  // Send volume data to server at ~20fps (use refs, not state, to avoid interval churn)
-  useEffect(() => {
-    if (!isJoined) return;
+  // ─── Handle messages from server ───
+  const handleServerMessage = useCallback((msg) => {
+    switch (msg.type) {
+      case 'joined':
+        break;
 
-    const interval = setInterval(() => {
-      const ws = wsRef.current;
-      if (ws?.readyState === 1) {
-        ws.send(JSON.stringify({
-          type: 'volume',
-          volume: volumeRef.current,
-          isSpeaking: isSpeakingRef.current,
-        }));
+      case 'game:lobby': {
+        const me = msg.players?.find((p) => p.id === deviceIdRef.current);
+        if (me) {
+          setTeam(me.team);
+          const tm = msg.teams?.[me.team];
+          if (tm) setTeamInfo({ name: tm.name, color: tm.color });
+          saveSession({
+            sessionCode: sessionCodeRef.current,
+            playerName: playerNameRef.current,
+            language: languageRef.current,
+            deviceId: deviceIdRef.current,
+            team: me.team,
+            teamInfo: tm ? { name: tm.name, color: tm.color } : null,
+          });
+        }
+        setPhase('lobby');
+        break;
       }
-    }, 50);
 
-    return () => clearInterval(interval);
-  }, [isJoined]);
+      case 'game:players_update': {
+        const me = msg.players?.find((p) => p.id === deviceIdRef.current);
+        if (me) {
+          setTeam(me.team);
+          const tm = msg.teams?.[me.team];
+          if (tm) setTeamInfo({ name: tm.name, color: tm.color });
+          saveSession({
+            sessionCode: sessionCodeRef.current,
+            playerName: playerNameRef.current,
+            language: languageRef.current,
+            deviceId: deviceIdRef.current,
+            team: me.team,
+            teamInfo: tm ? { name: tm.name, color: tm.color } : null,
+          });
+        } else {
+          clearSession();
+          setPhase('join');
+          setTeam(null);
+          setTeamInfo(null);
+        }
+        break;
+      }
 
-  // Local fuel visualization (use refs to avoid interval churn)
+      case 'game:countdown': {
+        const me = msg.players?.find((p) => p.id === deviceIdRef.current);
+        if (me) {
+          setTeam(me.team);
+          const tm = msg.teams?.[me.team];
+          if (tm) setTeamInfo({ name: tm.name, color: tm.color });
+        }
+        setRoundNumber(msg.round || 1);
+        setRoundTimeLeft(msg.duration || 60);
+        setWordsCompleted(0);
+        setPersonalScore(0);
+        setLastScored(null);
+        const lang = languageRef.current || 'en';
+        const queue = getWordQueue(lang);
+        wordQueueRef.current = queue;
+        setWordIndex(0);
+        setCurrentWord(queue[0] || null);
+        currentWordRef.current = queue[0] || null;
+        setPhase('countdown');
+
+        setTimeout(() => {
+          if (phaseRef.current === 'countdown') {
+            setPhase('playing');
+          }
+        }, 3500);
+        break;
+      }
+
+      case 'game:play':
+        if (phaseRef.current !== 'playing') {
+          setPhase('playing');
+        }
+        break;
+
+      case 'game:round_end':
+        setPhase('roundEnd');
+        setRoundWinner(msg.winner);
+        stopRecognition();
+        if (roundTimerRef.current) {
+          clearInterval(roundTimerRef.current);
+          roundTimerRef.current = null;
+        }
+        break;
+
+      case 'fuel_boost':
+        break;
+    }
+  }, []);
+
+  useEffect(() => { handleMessageRef.current = handleServerMessage; }, [handleServerMessage]);
+
+  // ─── Register as player ───
+  const registerPlayer = useCallback(() => {
+    if (!playerName.trim() || !language) {
+      setError(t.nameAndLang);
+      return;
+    }
+    setError(null);
+
+    const ws = wsRef.current;
+    const code = sessionCode.trim().toUpperCase();
+    if (ws?.readyState === 1) {
+      ws.send(JSON.stringify({
+        type: 'join',
+        role: 'echo',
+        code,
+        deviceId: deviceIdRef.current,
+        name: playerName.trim(),
+        language,
+      }));
+      isJoinedRef.current = true;
+    }
+
+    saveSession({
+      sessionCode: code,
+      playerName: playerName.trim(),
+      language,
+      deviceId: deviceIdRef.current,
+    });
+
+    setPhase('lobby');
+  }, [playerName, language, sessionCode]);
+
+  // ─── Word scoring ───
+  const advanceWord = useCallback(() => {
+    const word = currentWordRef.current;
+    if (!word) return;
+
+    const points = word.points || 1;
+    setWordsCompleted((w) => w + 1);
+    setPersonalScore((s) => s + points);
+    setLastScored({ word: word.word, points });
+
+    const ws = wsRef.current;
+    if (ws?.readyState === 1) {
+      ws.send(JSON.stringify({
+        type: 'player:word_scored',
+        playerName: playerNameRef.current,
+        word: word.word,
+        points,
+        team: teamRef.current,
+      }));
+    }
+
+    const nextIdx = wordQueueRef.current.indexOf(word) + 1;
+    if (nextIdx < wordQueueRef.current.length) {
+      const next = wordQueueRef.current[nextIdx];
+      setCurrentWord(next);
+      currentWordRef.current = next;
+      setWordIndex(nextIdx);
+    } else {
+      const queue = getWordQueue(languageRef.current || 'en');
+      wordQueueRef.current = queue;
+      setCurrentWord(queue[0]);
+      currentWordRef.current = queue[0];
+      setWordIndex(0);
+    }
+
+    setTimeout(() => setLastScored(null), 600);
+  }, []);
+
+  // ─── Speech Recognition ───
+  const startRecognition = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setUseTapMode(true);
+      return;
+    }
+
+    try {
+      const recognition = new SR();
+      const langInfo = LANGUAGES[languageRef.current];
+      recognition.lang = langInfo?.recognitionLang || 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 3;
+
+      recognition.onresult = (event) => {
+        const target = currentWordRef.current?.word;
+        if (!target) return;
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          for (let j = 0; j < event.results[i].length; j++) {
+            const transcript = event.results[i][j].transcript;
+            if (matchesWord(transcript, target, languageRef.current)) {
+              advanceWord();
+              return;
+            }
+          }
+        }
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-available') {
+          setUseTapMode(true);
+          return;
+        }
+        if (phaseRef.current === 'playing') {
+          try { recognition.start(); } catch {}
+        }
+      };
+
+      recognition.onend = () => {
+        if (phaseRef.current === 'playing') {
+          try { recognition.start(); } catch {}
+        }
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch {
+      setUseTapMode(true);
+    }
+  }, [advanceWord]);
+
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+  }, []);
+
+  // Start recognition + timer when playing phase begins
   useEffect(() => {
-    if (!isJoined) return;
-    const interval = setInterval(() => {
-      setFuelLevel((f) => {
-        if (isSpeakingRef.current) return Math.min(100, f + volumeRef.current * 8);
-        return Math.max(0, f - 0.5);
-      });
-    }, 50);
-    return () => clearInterval(interval);
-  }, [isJoined]);
+    if (phase !== 'playing') return;
+    if (!useTapMode) startRecognition();
 
-  // Cleanup
-  useEffect(() => {
+    roundTimerRef.current = setInterval(() => {
+      setRoundTimeLeft((v) => Math.max(0, v - 1));
+    }, 1000);
+
     return () => {
-      if (wsRef.current) wsRef.current.close();
-      const mic = micRef.current;
-      if (mic.raf) cancelAnimationFrame(mic.raf);
-      if (mic.stream) mic.stream.getTracks().forEach((t) => t.stop());
-      if (mic.audioCtx) mic.audioCtx.close();
+      stopRecognition();
+      if (roundTimerRef.current) {
+        clearInterval(roundTimerRef.current);
+        roundTimerRef.current = null;
+      }
+    };
+  }, [phase, useTapMode, startRecognition, stopRecognition]);
+
+  // ─── Keep screen awake ───
+  useEffect(() => {
+    let wakeLock = null;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch {}
+    }
+    requestWakeLock();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wakeLock) { try { wakeLock.release(); } catch {} }
     };
   }, []);
 
-  // Fuel color
-  const fuelColor = fuelLevel < 25 ? '#3B82F6' : fuelLevel < 50 ? '#F59E0B' : fuelLevel < 75 ? '#FBBF24' : '#FEF3C7';
+  // ─── Cleanup ───
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      stopRecognition();
+      if (roundTimerRef.current) clearInterval(roundTimerRef.current);
+    };
+  }, [stopRecognition]);
 
-  // --- JOIN SCREEN ---
-  if (!isJoined) {
+  // ─── Forget session (manual) ───
+  const forgetSession = useCallback(() => {
+    clearSession();
+    if (wsRef.current) { try { wsRef.current.close(); } catch {} }
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    setPhase('join');
+    setSessionCode('');
+    setPlayerName('');
+    setLanguage(null);
+    setTeam(null);
+    setTeamInfo(null);
+    setWsConnected(false);
+    isJoinedRef.current = false;
+  }, []);
+
+  // ─── Render ───
+  const teamColor = teamInfo?.color || 'var(--cyan)';
+  const teamName = teamInfo?.name || '';
+
+  // ════════════════════════════════════════════
+  //  JOIN SCREEN
+  // ════════════════════════════════════════════
+  if (phase === 'join') {
     return (
       <div className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
-        style={{ background: 'var(--bg-deep)' }}
-      >
-        <div className="text-center mb-12">
-          <div
-            className="bridge-display text-4xl tracking-wider bridge-text-glow-cyan"
-            style={{ color: 'var(--cyan)' }}
-          >
-            Echo
+        style={{ background: 'var(--bg-deep)' }}>
+        <div className="text-center mb-10">
+          <div className="bridge-display text-4xl tracking-wider bridge-text-glow-cyan"
+            style={{ color: 'var(--cyan)' }}>
+            {t.spellDuel}
           </div>
-          <div className="bridge-body text-lg mt-2" style={{ color: 'var(--text-secondary)' }}>
-            Voice sensor for Starlog Bridge
+          <div className="bridge-body text-base mt-2" style={{ color: 'var(--text-secondary)' }}>
+            {t.joinBattle}
           </div>
         </div>
 
         <div className="w-full max-w-xs">
-          <label
-            className="bridge-display text-xs tracking-[0.3em] block mb-3 text-center"
-            style={{ color: 'var(--text-dim)' }}
-          >
-            Session Code
+          <label className="bridge-display text-xs tracking-[0.3em] block mb-3 text-center"
+            style={{ color: 'var(--text-dim)' }}>
+            {t.sessionCode}
           </label>
           <input
             type="text"
@@ -240,182 +570,371 @@ export default function EchoPage() {
         </div>
 
         {error && (
-          <div className="mt-4 text-sm" style={{ color: 'var(--alert)' }}>
-            {error}
-          </div>
+          <div className="mt-4 text-sm" style={{ color: 'var(--alert)' }}>{error}</div>
+        )}
+
+        {reconnecting && (
+          <div className="mt-4 text-sm" style={{ color: 'var(--cyan)' }}>{t.reconnecting}</div>
         )}
 
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={joinSession}
           className="mt-8 px-10 py-4 rounded-xl bridge-display text-xl tracking-wider"
+          style={{ background: 'var(--cyan)', color: 'var(--bg-deep)' }}
+        >
+          {t.connect}
+        </motion.button>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════
+  //  PROFILE SCREEN
+  // ════════════════════════════════════════════
+  if (phase === 'profile') {
+    return (
+      <div className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
+        style={{ background: 'var(--bg-deep)' }}>
+        <div className="text-center mb-8">
+          <div className="bridge-display text-2xl tracking-wider" style={{ color: 'var(--text-primary)' }}>
+            {t.whoAreYou}
+          </div>
+        </div>
+
+        <div className="w-full max-w-xs mb-8">
+          <label className="bridge-display text-xs tracking-[0.3em] block mb-2"
+            style={{ color: 'var(--text-dim)' }}>
+            {t.yourName}
+          </label>
+          <input
+            type="text"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value.slice(0, 20))}
+            placeholder={t.enterName}
+            autoFocus
+            className="w-full text-center text-2xl py-3 px-4 rounded-xl border-2 outline-none bridge-body"
+            style={{
+              background: 'var(--bg-panel)',
+              borderColor: 'rgba(148, 163, 184, 0.2)',
+              color: 'var(--text-primary)',
+              caretColor: 'var(--cyan)',
+            }}
+            onFocus={(e) => { e.target.style.borderColor = 'var(--cyan)'; }}
+            onBlur={(e) => { e.target.style.borderColor = 'rgba(148, 163, 184, 0.2)'; }}
+          />
+        </div>
+
+        <div className="w-full max-w-xs mb-8">
+          <label className="bridge-display text-xs tracking-[0.3em] block mb-3 text-center"
+            style={{ color: 'var(--text-dim)' }}>
+            {t.imPracticing}
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            {Object.entries(LANGUAGES).map(([code, lang]) => (
+              <motion.button
+                key={code}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setLanguage(code)}
+                className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 transition-colors"
+                style={{
+                  background: language === code ? 'rgba(6, 182, 212, 0.15)' : 'var(--bg-panel)',
+                  borderColor: language === code ? 'var(--cyan)' : 'rgba(148, 163, 184, 0.1)',
+                }}
+              >
+                <span className="text-3xl">{lang.flag}</span>
+                <span
+                  className="bridge-display text-xs tracking-wider"
+                  style={{ color: language === code ? 'var(--cyan)' : 'var(--text-secondary)' }}
+                >
+                  {lang.name}
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 text-sm" style={{ color: 'var(--alert)' }}>{error}</div>
+        )}
+
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={registerPlayer}
+          className="px-10 py-4 rounded-xl bridge-display text-xl tracking-wider"
           style={{
-            background: 'var(--cyan)',
-            color: 'var(--bg-deep)',
+            background: playerName.trim() && language ? 'var(--amber)' : 'rgba(148, 163, 184, 0.2)',
+            color: playerName.trim() && language ? 'var(--bg-deep)' : 'var(--text-dim)',
           }}
         >
-          Connect
+          {t.joinGame}
         </motion.button>
+      </div>
+    );
+  }
 
-        <div className="mt-6 text-center bridge-mono text-xs" style={{ color: 'var(--text-dim)' }}>
-          Enter the code shown on the Bridge display
+  // ════════════════════════════════════════════
+  //  LOBBY
+  // ════════════════════════════════════════════
+  if (phase === 'lobby') {
+    return (
+      <div className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
+        style={{ background: 'var(--bg-deep)' }}>
+        {team && (
+          <div className="absolute top-0 left-0 right-0 h-2" style={{ background: teamColor }} />
+        )}
+
+        {/* Connection indicator */}
+        <div className="absolute top-4 right-4">
+          <div
+            className="w-2.5 h-2.5 rounded-full"
+            style={{
+              background: wsConnected ? '#22c55e' : '#ef4444',
+              boxShadow: wsConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
+            }}
+          />
+        </div>
+
+        <motion.div
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="text-center"
+        >
+          <div className="bridge-display text-2xl tracking-wider mb-2"
+            style={{ color: 'var(--text-primary)' }}>
+            {t.ready}
+          </div>
+          {teamName && (
+            <div className="bridge-display text-lg tracking-wider mb-4" style={{ color: teamColor }}>
+              {teamName}
+            </div>
+          )}
+          <div className="bridge-body text-base" style={{ color: 'var(--text-secondary)' }}>
+            {t.waitingForGame}
+          </div>
+        </motion.div>
+
+        <div className="absolute bottom-8 text-center">
+          <div className="bridge-mono text-sm" style={{ color: 'var(--text-dim)' }}>
+            {playerName}
+          </div>
+          <div className="bridge-mono text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
+            {LANGUAGES[language]?.flag} {LANGUAGES[language]?.name}
+          </div>
+          <button
+            onClick={forgetSession}
+            className="bridge-mono text-xs mt-3 px-3 py-1 rounded-lg"
+            style={{ color: 'var(--text-dim)', background: 'rgba(148, 163, 184, 0.1)' }}
+          >
+            {t.changeSession}
+          </button>
         </div>
       </div>
     );
   }
 
-  // --- CONNECTED / ACTIVE SCREEN ---
-  return (
-    <div
-      className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
-      style={{ background: 'var(--bg-deep)' }}
-    >
-      {/* Status bar */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{
-              backgroundColor: wsConnected ? 'var(--success)' : 'var(--alert)',
-              boxShadow: wsConnected ? '0 0 6px var(--success)' : 'none',
-            }}
-          />
-          <span className="bridge-mono text-xs" style={{ color: 'var(--text-dim)' }}>
-            {wsConnected ? `Connected · ${sessionCode}` : 'Reconnecting...'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{
-              backgroundColor: micConnected ? 'var(--success)' : 'var(--text-dim)',
-              boxShadow: micConnected ? '0 0 6px var(--success)' : 'none',
-            }}
-          />
-          <span className="bridge-mono text-xs" style={{ color: 'var(--text-dim)' }}>
-            {micConnected ? 'Mic active' : 'Mic off'}
-          </span>
+  // ════════════════════════════════════════════
+  //  COUNTDOWN
+  // ════════════════════════════════════════════
+  if (phase === 'countdown') {
+    return (
+      <div className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
+        style={{ background: 'var(--bg-deep)' }}>
+        <div className="absolute top-0 left-0 right-0 h-2" style={{ background: teamColor }} />
+        <PhoneCountdown />
+        <div className="absolute bottom-8 bridge-display text-sm tracking-wider"
+          style={{ color: teamColor }}>
+          {teamName}
         </div>
       </div>
+    );
+  }
 
-      {/* Mic enable prompt — shown if mic not yet active */}
-      {!micConnected && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 10, background: 'var(--bg-deep)' }}>
-          <div className="text-center mb-8">
-            <div className="bridge-display text-2xl tracking-wider" style={{ color: 'var(--text-primary)' }}>
-              Microphone Required
-            </div>
-            <div className="bridge-body text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-              Tap below to enable your microphone
-            </div>
+  // ════════════════════════════════════════════
+  //  PLAYING
+  // ════════════════════════════════════════════
+  if (phase === 'playing') {
+    const difficultyLabel = currentWord?.difficulty === 3 ? '★★★' : currentWord?.difficulty === 2 ? '★★' : '★';
+    const difficultyColor = currentWord?.difficulty === 3 ? 'var(--amber)' : currentWord?.difficulty === 2 ? 'var(--cyan)' : 'var(--text-dim)';
+
+    return (
+      <div className="bridge-mode fixed inset-0 flex flex-col p-4"
+        style={{ background: 'var(--bg-deep)' }}>
+        <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: teamColor }} />
+
+        {/* Top: timer + score */}
+        <div className="flex items-center justify-between pt-2 mb-4">
+          <div className="bridge-mono text-lg tabular-nums" style={{
+            color: roundTimeLeft <= 10 ? 'var(--alert)' : 'var(--text-secondary)',
+          }}>
+            0:{String(roundTimeLeft).padStart(2, '0')}
+          </div>
+          <div className="bridge-mono text-lg" style={{ color: 'var(--amber)' }}>
+            {personalScore} pts 分
+          </div>
+        </div>
+
+        {/* Word display */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <AnimatePresence>
+            {lastScored && (
+              <motion.div
+                initial={{ opacity: 1, y: 0, scale: 1.5 }}
+                animate={{ opacity: 0, y: -40 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute bridge-display text-3xl"
+                style={{ color: 'var(--amber)', top: '30%' }}
+              >
+                +{lastScored.points}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="bridge-mono text-sm mb-2" style={{ color: difficultyColor }}>
+            {difficultyLabel}
           </div>
 
-          {error && (
-            <div className="mb-6 text-sm px-4 text-center" style={{ color: 'var(--alert)' }}>
-              {error}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentWord?.word}
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="text-center"
+            >
+              <div
+                className="bridge-display tracking-wider mb-3"
+                style={{
+                  fontSize: (currentWord?.word?.length || 0) > 8 ? '2.5rem' : '3.5rem',
+                  color: 'var(--text-primary)',
+                  textShadow: '0 0 20px rgba(255,255,255,0.1)',
+                }}
+              >
+                {currentWord?.word}
+              </div>
+              <div className="bridge-mono text-lg" style={{ color: 'var(--cyan)' }}>
+                {currentWord?.hint}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-6 bridge-mono text-sm" style={{ color: 'var(--text-dim)' }}>
+            {wordsCompleted} {t.spellsCast}
+          </div>
+        </div>
+
+        {/* Cast button */}
+        <div className="pb-4">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={advanceWord}
+            className="w-full py-5 rounded-2xl bridge-display text-2xl tracking-wider"
+            style={{
+              background: useTapMode
+                ? `linear-gradient(135deg, ${teamColor}, ${teamColor}CC)`
+                : 'rgba(148, 163, 184, 0.1)',
+              color: useTapMode ? 'var(--bg-deep)' : 'var(--text-secondary)',
+              border: useTapMode ? 'none' : '1px solid rgba(148, 163, 184, 0.15)',
+            }}
+          >
+            {useTapMode ? t.cast : t.skip}
+          </motion.button>
+          {!useTapMode && (
+            <div className="text-center bridge-mono text-xs mt-2" style={{ color: 'var(--text-dim)' }}>
+              {t.sayOrTap}
             </div>
           )}
-
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={enableMic}
-            className="px-12 py-5 rounded-2xl bridge-display text-2xl tracking-wider"
-            style={{
-              background: 'var(--amber)',
-              color: 'var(--bg-deep)',
-            }}
-          >
-            Enable Mic
-          </motion.button>
-        </div>
-      )}
-
-      {/* Fuel ring */}
-      <div className="relative flex items-center justify-center" style={{ width: 240, height: 240 }}>
-        <svg width="240" height="240" viewBox="0 0 240 240">
-          <circle
-            cx="120" cy="120" r="100"
-            fill="none"
-            stroke="rgba(30, 41, 59, 0.8)"
-            strokeWidth="12"
-          />
-          <circle
-            cx="120" cy="120" r="100"
-            fill="none"
-            stroke={fuelColor}
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeDasharray={`${2 * Math.PI * 100}`}
-            strokeDashoffset={`${2 * Math.PI * 100 * (1 - fuelLevel / 100)}`}
-            transform="rotate(-90 120 120)"
-            style={{
-              transition: 'stroke-dashoffset 0.2s, stroke 0.5s',
-              filter: `drop-shadow(0 0 ${6 + fuelLevel * 0.15}px ${fuelColor})`,
-            }}
-          />
-        </svg>
-
-        <div className="absolute text-center">
-          <div
-            className="bridge-display text-5xl"
-            style={{ color: fuelColor, textShadow: `0 0 15px ${fuelColor}40` }}
-          >
-            {Math.round(fuelLevel)}
-          </div>
-          <div className="bridge-mono text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
-            FUEL
-          </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Speaking indicator */}
-      <motion.div
-        animate={{
-          scale: isSpeaking ? [1, 1.1, 1] : 1,
-          opacity: isSpeaking ? 1 : 0.4,
-        }}
-        transition={{ duration: 0.3, repeat: isSpeaking ? Infinity : 0, repeatType: 'loop' }}
-        className="mt-8 flex items-center gap-3"
-      >
-        <div
-          className="w-4 h-4 rounded-full"
-          style={{
-            backgroundColor: isSpeaking ? 'var(--success)' : 'var(--text-dim)',
-            boxShadow: isSpeaking ? '0 0 12px var(--success)' : 'none',
-            transition: 'all 0.15s',
-          }}
-        />
-        <span
-          className="bridge-display text-lg tracking-wider"
-          style={{ color: isSpeaking ? 'var(--text-primary)' : 'var(--text-dim)' }}
+  // ════════════════════════════════════════════
+  //  ROUND END
+  // ════════════════════════════════════════════
+  if (phase === 'roundEnd') {
+    return (
+      <div className="bridge-mode fixed inset-0 flex flex-col items-center justify-center p-6"
+        style={{ background: 'var(--bg-deep)' }}>
+        <div className="absolute top-0 left-0 right-0 h-2" style={{ background: teamColor }} />
+
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring' }}
+          className="text-center mb-6"
         >
-          {isSpeaking ? 'Speaking' : 'Listening...'}
-        </span>
-      </motion.div>
+          <div className="bridge-display text-4xl tracking-wider mb-2" style={{
+            color: roundWinner === team ? 'var(--amber)' : roundWinner === 'tie' ? 'var(--cyan)' : 'var(--text-secondary)',
+          }}>
+            {roundWinner === team ? t.victory : roundWinner === 'tie' ? t.tie : t.defeated}
+          </div>
+          <div className="bridge-mono text-sm" style={{ color: 'var(--text-dim)' }}>
+            {t.round} {roundNumber} {t.complete}
+          </div>
+        </motion.div>
 
-      {/* Volume meter */}
-      <div
-        className="mt-6 rounded-full overflow-hidden"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-center"
+        >
+          <div className="bridge-display text-6xl mb-2" style={{ color: 'var(--amber)' }}>
+            {personalScore}
+          </div>
+          <div className="bridge-mono text-sm" style={{ color: 'var(--text-dim)' }}>
+            pts 分 · {wordsCompleted} {t.spellsCast}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="absolute bottom-8 bridge-body text-sm"
+          style={{ color: 'var(--text-dim)' }}
+        >
+          {t.waitingNextRound}
+        </motion.div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Simple phone-side countdown display
+ */
+function PhoneCountdown() {
+  const [count, setCount] = useState(3);
+
+  useEffect(() => {
+    if (count <= 0) return;
+    const timer = setTimeout(() => setCount(count - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [count]);
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={count}
+        initial={{ scale: 2.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.3, opacity: 0 }}
+        transition={{ duration: 0.3, type: 'spring' }}
+        className="bridge-display"
         style={{
-          width: 200,
-          height: 6,
-          background: 'rgba(30, 41, 59, 0.8)',
+          fontSize: count === 0 ? '5rem' : '8rem',
+          color: count === 0 ? 'var(--amber)' : 'var(--text-primary)',
+          textShadow: `0 0 40px ${count === 0 ? 'var(--amber)' : 'rgba(255,255,255,0.3)'}`,
         }}
       >
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.min(volume * 300, 100)}%`,
-            background: `linear-gradient(to right, var(--fuel-cold), ${fuelColor})`,
-            transition: 'width 0.05s',
-          }}
-        />
-      </div>
-
-      {/* Hint */}
-      <div className="absolute bottom-8 text-center bridge-body text-sm" style={{ color: 'var(--text-dim)' }}>
-        Speak to power the ship!
-      </div>
-    </div>
+        {count === 0 ? t.go : count}
+      </motion.div>
+    </AnimatePresence>
   );
 }

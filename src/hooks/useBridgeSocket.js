@@ -3,8 +3,10 @@ import { useBridgeStore } from '../stores/bridgeStore';
 
 /**
  * WebSocket hook for Bridge Mode.
- * Connects to the relay server, receives volume data from Echo devices,
+ * Connects to the relay server, receives data from Echo devices,
  * and feeds it into the bridge store.
+ *
+ * Returns { connected, send } — send() broadcasts to all echoes in the session.
  */
 export default function useBridgeSocket(sessionCode) {
   const [connected, setConnected] = useState(false);
@@ -14,7 +16,6 @@ export default function useBridgeSocket(sessionCode) {
   const connect = useCallback(() => {
     if (!sessionCode) return;
 
-    // Determine WS URL — same host as the page, port 8080
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
 
@@ -43,23 +44,51 @@ export default function useBridgeSocket(sessionCode) {
 
         switch (msg.type) {
           case 'joined':
-            // Initial device list
             if (msg.devices) {
               store.setConnectedDevices(msg.devices);
+              // Also register as players
+              msg.devices.forEach((d) => {
+                if (d.name) {
+                  store.addPlayer({
+                    id: d.deviceId,
+                    name: d.name,
+                    language: d.language || 'en',
+                  });
+                }
+              });
             }
             break;
 
           case 'echo_connected':
             store.addConnectedDevice(msg.device);
+            // Register as player if they have a name
+            if (msg.device?.name) {
+              store.addPlayer({
+                id: msg.device.deviceId,
+                name: msg.device.name,
+                language: msg.device.language || 'en',
+              });
+            }
             break;
 
           case 'echo_disconnected':
             store.removeConnectedDevice(msg.deviceId);
+            store.removePlayer(msg.deviceId);
             break;
 
           case 'volume':
-            // Feed remote volume into the store
             store.setRemoteVolume(msg.deviceId, msg.volume, msg.isSpeaking);
+            break;
+
+          // Player game events (relayed from echo → bridge)
+          case 'player:word_scored':
+            store.scoreWord({
+              playerId: msg.deviceId,
+              playerName: msg.playerName,
+              word: msg.word,
+              points: msg.points,
+              team: msg.team,
+            });
             break;
         }
       };
@@ -67,7 +96,6 @@ export default function useBridgeSocket(sessionCode) {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = null;
-        // Reconnect after 2s
         reconnectTimerRef.current = setTimeout(connect, 2000);
       };
 
@@ -91,10 +119,17 @@ export default function useBridgeSocket(sessionCode) {
     setConnected(false);
   }, []);
 
+  // Send a message to all echoes in the session (via server relay)
+  const send = useCallback((data) => {
+    if (wsRef.current?.readyState === 1) {
+      wsRef.current.send(JSON.stringify(data));
+    }
+  }, []);
+
   useEffect(() => {
     connect();
     return () => disconnect();
   }, [connect, disconnect]);
 
-  return { connected };
+  return { connected, send };
 }

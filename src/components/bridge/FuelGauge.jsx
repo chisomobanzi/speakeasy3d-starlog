@@ -140,7 +140,7 @@ export default function FuelGauge({ compact = false }) {
         </div>
         {!compact && (
           <div className="text-[10px] tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
-            {fuelMuted ? 'Muted' : 'Fuel'}
+            {fuelMuted ? 'Muted 靜音' : 'Fuel 燃料'}
           </div>
         )}
       </div>

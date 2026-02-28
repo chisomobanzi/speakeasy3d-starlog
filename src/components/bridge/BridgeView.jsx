@@ -1,5 +1,7 @@
-import { useMemo } from 'react';
-import { useBridgeStore } from '../../stores/bridgeStore';
+import { useMemo, useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+import { useBridgeStore, GAME_PHASES } from '../../stores/bridgeStore';
+import { t, playersConnected } from '../../data/i18n';
 import FuelGauge from './FuelGauge';
 import BridgeParticles from './BridgeParticles';
 import ShipStatus from './ShipStatus';
@@ -11,10 +13,26 @@ import ShipStatus from './ShipStatus';
  */
 export default function BridgeView() {
   const fuelLevel = useBridgeStore((s) => s.fuelLevel);
+  const sessionCode = useBridgeStore((s) => s.sessionCode);
+  const gamePhase = useBridgeStore((s) => s.gamePhase);
+  const players = useBridgeStore((s) => s.players);
+  const showJoinScreen = gamePhase === GAME_PHASES.IDLE;
+  const connectedCount = players.filter((p) => p.connected).length;
 
   // Ambient brightness responds to fuel
   const ambientOpacity = useMemo(() => 0.15 + (fuelLevel / 100) * 0.6, [fuelLevel]);
   const viewportGlow = useMemo(() => Math.min(fuelLevel / 100, 1), [fuelLevel]);
+
+  // Large QR code for join screen
+  const [bigQrUrl, setBigQrUrl] = useState(null);
+  useEffect(() => {
+    const echoUrl = `${window.location.origin}/echo`;
+    QRCode.toDataURL(echoUrl, {
+      width: 560,
+      margin: 2,
+      color: { dark: '#06B6D4', light: '#00000000' },
+    }).then(setBigQrUrl).catch(() => {});
+  }, []);
 
   return (
     <div className="absolute inset-0 bridge-scanlines" style={{ background: 'var(--bg-deep)' }}>
@@ -137,27 +155,64 @@ export default function BridgeView() {
         <FuelGauge />
       </div>
 
-      {/* Center label — campaign title */}
-      <div
-        className="absolute bottom-[12%] left-1/2 -translate-x-1/2 text-center"
-        style={{ zIndex: 5 }}
-      >
+      {/* Center — big QR join screen (idle) or status label (active) */}
+      {showJoinScreen ? (
         <div
-          className="bridge-display text-3xl tracking-wider bridge-text-glow-amber"
-          style={{
-            color: `rgba(245, 158, 11, ${0.4 + viewportGlow * 0.6})`,
-            transition: 'color 1s',
-          }}
+          className="absolute inset-0 flex flex-col items-center justify-center"
+          style={{ zIndex: 5 }}
         >
-          {useBridgeStore.getState().sessionActive ? 'Engines Online' : 'Awaiting Crew'}
+          <div
+            className="bridge-display text-2xl tracking-wider mb-6"
+            style={{ color: 'var(--text-dim)' }}
+          >
+            {t.scanToJoin}
+          </div>
+          {bigQrUrl && (
+            <img
+              src={bigQrUrl}
+              alt="Scan to join"
+              className="rounded-2xl"
+              style={{
+                width: 560,
+                height: 560,
+                filter: 'drop-shadow(0 0 30px rgba(6, 182, 212, 0.3))',
+              }}
+            />
+          )}
+          <div
+            className="bridge-display text-5xl tracking-[0.5em] mt-6 bridge-text-glow-cyan"
+            style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}
+          >
+            {sessionCode}
+          </div>
+          {connectedCount > 0 && (
+            <div className="bridge-mono text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>
+              {playersConnected(connectedCount)}
+            </div>
+          )}
+          <div className="bridge-mono text-xs mt-3" style={{ color: 'var(--text-dim)' }}>
+            Press T for teacher controls
+          </div>
         </div>
+      ) : (
         <div
-          className="bridge-mono text-sm mt-2"
-          style={{ color: 'var(--text-dim)' }}
+          className="absolute bottom-[12%] left-1/2 -translate-x-1/2 text-center"
+          style={{ zIndex: 5 }}
         >
-          Speak to power the ship
+          <div
+            className="bridge-display text-3xl tracking-wider bridge-text-glow-amber"
+            style={{
+              color: `rgba(245, 158, 11, ${0.4 + viewportGlow * 0.6})`,
+              transition: 'color 1s',
+            }}
+          >
+            {useBridgeStore.getState().sessionActive ? t.enginesOnline : t.awaitingCrew}
+          </div>
+          <div className="bridge-mono text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
+            {t.speakToPower}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

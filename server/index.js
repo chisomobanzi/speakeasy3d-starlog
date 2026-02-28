@@ -58,7 +58,18 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify({ type: 'joined', role, code: sessionCode, devices }));
         console.log(`Bridge joined session ${sessionCode} (${session.bridges.size} bridges, ${session.echoes.size} echoes)`);
       } else if (role === 'echo') {
-        const info = { deviceId, name: msg.name || 'Echo Device', joinedAt: Date.now() };
+        const info = { deviceId, name: msg.name || 'Player', language: msg.language || 'en', joinedAt: Date.now() };
+
+        // Dedup: remove old WS entry for same deviceId (reconnecting player)
+        for (const [oldWs, oldInfo] of session.echoes) {
+          if (oldInfo.deviceId === deviceId && oldWs !== ws) {
+            session.echoes.delete(oldWs);
+            try { oldWs.close(); } catch {}
+            console.log(`Dedup: removed stale connection for ${deviceId}`);
+            break;
+          }
+        }
+
         session.echoes.set(ws, info);
 
         ws.send(JSON.stringify({ type: 'joined', role, code: sessionCode, deviceId }));
@@ -108,6 +119,28 @@ wss.on('connection', (ws) => {
         if (echo.readyState === 1) {
           echo.send(payload);
         }
+      }
+      return;
+    }
+
+    // --- GAME EVENTS from bridge → relay to all echoes ---
+    if (msg.type?.startsWith('game:') && role === 'bridge' && sessionCode) {
+      const session = sessions.get(sessionCode);
+      if (!session) return;
+      const payload = JSON.stringify(msg);
+      for (const [echo] of session.echoes) {
+        if (echo.readyState === 1) echo.send(payload);
+      }
+      return;
+    }
+
+    // --- PLAYER EVENTS from echo → relay to all bridges ---
+    if (msg.type?.startsWith('player:') && role === 'echo' && sessionCode) {
+      const session = sessions.get(sessionCode);
+      if (!session) return;
+      const payload = JSON.stringify({ ...msg, deviceId });
+      for (const bridge of session.bridges) {
+        if (bridge.readyState === 1) bridge.send(payload);
       }
       return;
     }

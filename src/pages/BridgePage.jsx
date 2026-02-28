@@ -1,20 +1,21 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useBridgeStore, SCREENS } from '../stores/bridgeStore';
+import { useBridgeStore, SCREENS, GAME_PHASES } from '../stores/bridgeStore';
 import useMicrophone from '../hooks/useMicrophone';
 import useBridgeSocket from '../hooks/useBridgeSocket';
 import BridgeView from '../components/bridge/BridgeView';
 import StarMap from '../components/bridge/StarMap';
 import SceneView from '../components/bridge/SceneView';
 import Encounter from '../components/bridge/Encounter';
+import GameView from '../components/bridge/GameView';
 import TransitionScreen from '../components/bridge/TransitionScreen';
 import TeacherControls from '../components/bridge/TeacherControls';
 import '../styles/bridge.css';
 
 /**
  * BridgePage — the main entry point for Bridge Mode.
- * Manages screen state, keyboard shortcuts, and the mic → fuel loop.
- * Connects to WS relay to receive volume from Echo phone devices.
+ * Manages screen state, keyboard shortcuts, mic → fuel loop,
+ * and broadcasts game events to Echo devices via WebSocket.
  */
 export default function BridgePage() {
   const currentScreen = useBridgeStore((s) => s.currentScreen);
@@ -29,6 +30,8 @@ export default function BridgePage() {
   const setMicConnected = useBridgeStore((s) => s.setMicConnected);
   const encounterActive = useBridgeStore((s) => s.encounterActive);
   const sessionCode = useBridgeStore((s) => s.sessionCode);
+  const gamePhase = useBridgeStore((s) => s.gamePhase);
+  const teamVersion = useBridgeStore((s) => s.teamVersion);
 
   // Local microphone (off by default — use Echo devices instead)
   const localMicEnabled = useBridgeStore((s) => s.localMicEnabled);
@@ -36,16 +39,73 @@ export default function BridgePage() {
   const lastTickRef = useRef(Date.now());
 
   // WebSocket connection to relay server
-  const { connected: wsConnected } = useBridgeSocket(sessionCode);
+  const { connected: wsConnected, send: wsSend } = useBridgeSocket(sessionCode);
 
   // Sync mic connection status
   useEffect(() => {
     setMicConnected(isConnected);
   }, [isConnected, setMicConnected]);
 
-  // Fuel loop — combines local mic + remote echo volume
+  // ─── Broadcast game phase changes to Echo devices ───
   useEffect(() => {
-    if (encounterActive) return; // encounters handle their own fuel
+    if (!wsSend) return;
+
+    const store = useBridgeStore.getState();
+
+    if (gamePhase === GAME_PHASES.LOBBY) {
+      wsSend({
+        type: 'game:lobby',
+        mode: store.currentGameMode,
+        players: store.players,
+        teams: store.teams,
+      });
+    }
+
+    if (gamePhase === GAME_PHASES.COUNTDOWN) {
+      wsSend({
+        type: 'game:countdown',
+        round: store.currentRound,
+        duration: store.roundDuration,
+        players: store.players,
+        teams: store.teams,
+      });
+    }
+
+    if (gamePhase === GAME_PHASES.PLAYING) {
+      wsSend({
+        type: 'game:play',
+        round: store.currentRound,
+        duration: store.roundDuration,
+      });
+    }
+
+    if (gamePhase === GAME_PHASES.ROUND_END) {
+      wsSend({
+        type: 'game:round_end',
+        winner: store.roundWinner,
+        teams: store.teams,
+        players: store.players,
+        round: store.currentRound,
+      });
+    }
+  }, [gamePhase, wsSend]);
+
+  // ─── Broadcast team/player changes to Echo devices ───
+  useEffect(() => {
+    if (!wsSend || teamVersion === 0) return;
+    const store = useBridgeStore.getState();
+    wsSend({
+      type: 'game:players_update',
+      players: store.players,
+      teams: store.teams,
+    });
+  }, [teamVersion, wsSend]);
+
+  // ─── Fuel loop — combines local mic + remote echo volume ───
+  useEffect(() => {
+    if (encounterActive) return;
+    // Don't run fuel loop during game phases
+    if (gamePhase !== GAME_PHASES.IDLE) return;
 
     const loop = () => {
       const now = Date.now();
@@ -59,19 +119,16 @@ export default function BridgePage() {
         return;
       }
 
-      // Combine remote echo volume + local mic (if enabled)
       const hasEcho = store.connectedDevices.length > 0;
       const useLocal = store.localMicEnabled;
       const activeVolume = hasEcho ? store.remoteVolume : useLocal ? localVolume : 0;
       const activeSpeaking = hasEcho ? store.remoteSpeaking : useLocal ? localSpeaking : false;
 
       if (activeSpeaking) {
-        // Fill rate: roughly 0→100 in ~30s of continuous speech
         const fillRate = activeVolume * 200 * delta;
         store.addFuel(fillRate);
         store.bankFuel();
       } else {
-        // Decay rate: roughly 100→0 in ~60s of silence
         store.decayFuel(delta);
       }
 
@@ -83,11 +140,10 @@ export default function BridgePage() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [localSpeaking, localVolume, encounterActive]);
+  }, [localSpeaking, localVolume, encounterActive, gamePhase]);
 
-  // Keyboard shortcuts
+  // ─── Keyboard shortcuts ───
   const handleKeyDown = useCallback((e) => {
-    // Ignore if typing in an input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
     switch (e.key) {
@@ -100,13 +156,13 @@ export default function BridgePage() {
       case '3':
         setScreen(SCREENS.SCENE);
         break;
+      case '4':
+        // Quick start game
+        useBridgeStore.getState().startGame('spellDuel');
+        break;
       case ' ':
         e.preventDefault();
         if (currentScreen === SCREENS.SCENE) advanceBeat();
-        break;
-      case 'e':
-      case 'E':
-        // Trigger first available encounter (for quick demo)
         break;
       case 'b':
       case 'B':
@@ -162,6 +218,7 @@ export default function BridgePage() {
           {currentScreen === SCREENS.STAR_MAP && <StarMap />}
           {currentScreen === SCREENS.SCENE && <SceneView />}
           {currentScreen === SCREENS.ENCOUNTER && <Encounter />}
+          {currentScreen === SCREENS.GAME && <GameView />}
         </motion.div>
       </AnimatePresence>
 
@@ -171,7 +228,7 @@ export default function BridgePage() {
       {/* Teacher controls */}
       <TeacherControls />
 
-      {/* Keyboard hint (bottom right, always visible, very subtle) */}
+      {/* Keyboard hint */}
       <div
         className="fixed bottom-4 right-4 bridge-mono text-xs"
         style={{ color: 'rgba(100, 116, 139, 0.3)', zIndex: 50 }}

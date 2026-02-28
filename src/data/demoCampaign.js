@@ -8,7 +8,7 @@ export const demoCampaign = {
   title: 'The Luminara Voyage',
   description: 'A crew of young explorers embarks on a journey through the Luminara system, encountering alien civilisations and cosmic mysteries.',
   shipName: 'SS Pathfinder',
-  className: 'Treellege Crew',
+  className: 'LAB Crew',
 };
 
 // ============================================================================
