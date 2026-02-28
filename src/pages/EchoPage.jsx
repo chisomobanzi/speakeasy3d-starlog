@@ -545,41 +545,38 @@ export default function EchoPage() {
     }, 1000);
 
     // ─── Mic amplitude visualization ───
-    // Only use getUserMedia for visualization in tap mode.
-    // When ASR is active, getUserMedia steals the mic and produces empty transcripts.
     let cancelled = false;
-    if (useTapMode) {
-      (async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
-          micStreamRef.current = stream;
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          audioCtxRef.current = ctx;
-          const source = ctx.createMediaStreamSource(stream);
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 256;
-          analyser.smoothingTimeConstant = 0.7;
-          source.connect(analyser);
-          analyserRef.current = analyser;
-          const data = new Uint8Array(analyser.frequencyBinCount);
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        micStreamRef.current = stream;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.7;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+        const data = new Uint8Array(analyser.frequencyBinCount);
 
-          const tick = () => {
-            if (cancelled) return;
-            analyser.getByteFrequencyData(data);
-            let sum = 0;
-            const bins = Math.min(64, data.length);
-            for (let i = 0; i < bins; i++) sum += data[i];
-            const avg = sum / bins / 255;
-            setMicVolume(avg);
-            micRafRef.current = requestAnimationFrame(tick);
-          };
+        const tick = () => {
+          if (cancelled) return;
+          analyser.getByteFrequencyData(data);
+          // Average of lower frequencies (voice range)
+          let sum = 0;
+          const bins = Math.min(64, data.length);
+          for (let i = 0; i < bins; i++) sum += data[i];
+          const avg = sum / bins / 255; // 0–1
+          setMicVolume(avg);
           micRafRef.current = requestAnimationFrame(tick);
-        } catch {
-          // No mic access — visualization just stays dark
-        }
-      })();
-    }
+        };
+        micRafRef.current = requestAnimationFrame(tick);
+      } catch {
+        // No mic access — visualization just stays dark
+      }
+    })();
 
     return () => {
       cancelled = true;
