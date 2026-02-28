@@ -1,7 +1,76 @@
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Crown } from 'lucide-react';
 import { useBridgeStore } from '../../stores/bridgeStore';
 import { t, roundN, spellsAndPts, ptsLabel } from '../../data/i18n';
+
+/**
+ * Simple canvas confetti burst.
+ * Returns a cleanup function.
+ */
+function fireConfetti(canvas, teamColor) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.parentElement.offsetWidth;
+  const H = canvas.height = canvas.parentElement.offsetHeight;
+
+  const colors = [teamColor, '#f59e0b', '#06b6d4', '#22c55e', '#a855f7', '#ef4444', '#3b82f6'];
+  const pieces = Array.from({ length: 120 }, () => ({
+    x: W * 0.5 + (Math.random() - 0.5) * W * 0.3,
+    y: H * 0.35,
+    vx: (Math.random() - 0.5) * 14,
+    vy: -Math.random() * 16 - 4,
+    w: Math.random() * 8 + 4,
+    h: Math.random() * 6 + 3,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    rot: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.3,
+    opacity: 1,
+  }));
+
+  let raf;
+  const gravity = 0.35;
+  const drag = 0.98;
+
+  const tick = () => {
+    ctx.clearRect(0, 0, W, H);
+    let alive = false;
+    for (const p of pieces) {
+      p.vy += gravity;
+      p.vx *= drag;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.spin;
+      if (p.y > H + 20) p.opacity = Math.max(0, p.opacity - 0.05);
+      if (p.opacity <= 0) continue;
+      alive = true;
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    if (alive) raf = requestAnimationFrame(tick);
+  };
+
+  // Fire two bursts
+  raf = requestAnimationFrame(tick);
+  const burst2 = setTimeout(() => {
+    for (const p of pieces) {
+      p.x = W * 0.5 + (Math.random() - 0.5) * W * 0.5;
+      p.y = H * 0.3;
+      p.vx = (Math.random() - 0.5) * 16;
+      p.vy = -Math.random() * 14 - 6;
+      p.opacity = 1;
+    }
+  }, 700);
+
+  return () => {
+    cancelAnimationFrame(raf);
+    clearTimeout(burst2);
+  };
+}
 
 /**
  * RoundResults — shown between rounds.
@@ -12,6 +81,15 @@ export default function RoundResults() {
   const players = useBridgeStore((s) => s.players);
   const currentRound = useBridgeStore((s) => s.currentRound);
   const roundWinner = useBridgeStore((s) => s.roundWinner);
+  const canvasRef = useRef(null);
+
+  // Fire confetti on mount
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const winnerTeam = roundWinner === 'tie' ? null : teams[roundWinner];
+    const color = winnerTeam?.color || '#f59e0b';
+    return fireConfetti(canvasRef.current, color);
+  }, [roundWinner, teams]);
 
   const winnerTeam = roundWinner === 'tie' ? null : teams[roundWinner];
   const winnerColor = winnerTeam?.color || 'var(--amber)';
@@ -26,6 +104,12 @@ export default function RoundResults() {
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
+      {/* Confetti canvas */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 10 }}
+      />
       {/* Round winner */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}

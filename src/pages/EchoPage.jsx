@@ -309,6 +309,7 @@ export default function EchoPage() {
         setTimeout(() => {
           if (phaseRef.current === 'countdown') {
             setPhase('playing');
+            navigator.vibrate?.([50, 30, 50]); // double pulse — GO!
           }
         }, 3500);
         break;
@@ -341,6 +342,7 @@ export default function EchoPage() {
       case 'game:round_end':
         setPhase('roundEnd');
         setRoundWinner(msg.winner);
+        navigator.vibrate?.([100, 50, 100, 50, 200]); // round over pattern
         stopRecognition();
         if (roundTimerRef.current) {
           clearInterval(roundTimerRef.current);
@@ -398,6 +400,7 @@ export default function EchoPage() {
     setLastScored({ word: word.word, points });
     setRewardFlash(true);
     setTimeout(() => setRewardFlash(false), 400);
+    navigator.vibrate?.(40); // quick buzz on correct word
 
     const ws = wsRef.current;
     if (ws?.readyState === 1) {
