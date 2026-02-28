@@ -7,6 +7,9 @@
 export const LANGUAGES = {
   en: { code: 'en', recognitionLang: 'en-US', name: 'English', flag: '🇬🇧' },
   zh: { code: 'zh', recognitionLang: 'zh-TW', name: '中文', flag: '🇹🇼' },
+  ja: { code: 'ja', recognitionLang: 'ja-JP', name: '日本語', flag: '🇯🇵' },
+  fr: { code: 'fr', recognitionLang: 'fr-FR', name: 'Français', flag: '🇫🇷' },
+  pt: { code: 'pt', recognitionLang: 'pt-BR', name: 'Português', flag: '🇧🇷' },
   es: { code: 'es', recognitionLang: 'es-ES', name: 'Español', flag: '🇪🇸' },
 };
 
@@ -154,6 +157,150 @@ export const wordLists = {
     { word: 'oportunidad', hint: 'oh-por-too-nee-DAHD', difficulty: 3, points: 3 },
     { word: 'felicidades', hint: 'feh-lee-see-DAH-dehs', difficulty: 3, points: 3 },
   ],
+
+  ja: [
+    // Difficulty 1 — basic words/phrases (1 point)
+    { word: 'こんにちは', hint: 'kon-ni-chi-wa', difficulty: 1, points: 1 },
+    { word: 'ありがとう', hint: 'a-ri-ga-tō', difficulty: 1, points: 1 },
+    { word: 'さようなら', hint: 'sa-yō-na-ra', difficulty: 1, points: 1 },
+    { word: 'ねこ', hint: 'ne-ko', difficulty: 1, points: 1 },
+    { word: 'いぬ', hint: 'i-nu', difficulty: 1, points: 1 },
+    { word: 'みず', hint: 'mi-zu', difficulty: 1, points: 1 },
+    { word: 'やま', hint: 'ya-ma', difficulty: 1, points: 1 },
+    { word: 'はな', hint: 'ha-na', difficulty: 1, points: 1 },
+    { word: 'そら', hint: 'so-ra', difficulty: 1, points: 1 },
+    { word: 'あか', hint: 'a-ka', difficulty: 1, points: 1 },
+    { word: 'あお', hint: 'a-o', difficulty: 1, points: 1 },
+    { word: 'ひ', hint: 'hi', difficulty: 1, points: 1 },
+    { word: 'つき', hint: 'tsu-ki', difficulty: 1, points: 1 },
+    { word: 'ほし', hint: 'ho-shi', difficulty: 1, points: 1 },
+    { word: 'さかな', hint: 'sa-ka-na', difficulty: 1, points: 1 },
+    { word: 'たべる', hint: 'ta-be-ru', difficulty: 1, points: 1 },
+    { word: 'のむ', hint: 'no-mu', difficulty: 1, points: 1 },
+    { word: 'おおきい', hint: 'ō-kī', difficulty: 1, points: 1 },
+    { word: 'ちいさい', hint: 'chī-sai', difficulty: 1, points: 1 },
+    { word: 'いち', hint: 'i-chi', difficulty: 1, points: 1 },
+
+    // Difficulty 2 — compound words (2 points)
+    { word: 'ともだち', hint: 'to-mo-da-chi', difficulty: 2, points: 2 },
+    { word: 'せんせい', hint: 'sen-sē', difficulty: 2, points: 2 },
+    { word: 'がっこう', hint: 'gak-kō', difficulty: 2, points: 2 },
+    { word: 'でんしゃ', hint: 'den-sha', difficulty: 2, points: 2 },
+    { word: 'おんがく', hint: 'on-ga-ku', difficulty: 2, points: 2 },
+    { word: 'しごと', hint: 'shi-go-to', difficulty: 2, points: 2 },
+    { word: 'かぞく', hint: 'ka-zo-ku', difficulty: 2, points: 2 },
+    { word: 'たのしい', hint: 'ta-no-shī', difficulty: 2, points: 2 },
+    { word: 'うつくしい', hint: 'u-tsu-ku-shī', difficulty: 2, points: 2 },
+    { word: 'おいしい', hint: 'o-i-shī', difficulty: 2, points: 2 },
+    { word: 'べんきょう', hint: 'ben-kyō', difficulty: 2, points: 2 },
+    { word: 'にほんご', hint: 'ni-hon-go', difficulty: 2, points: 2 },
+
+    // Difficulty 3 — advanced (3 points)
+    { word: 'としょかん', hint: 'to-sho-kan', difficulty: 3, points: 3 },
+    { word: 'びょういん', hint: 'byō-in', difficulty: 3, points: 3 },
+    { word: 'しんかんせん', hint: 'shin-kan-sen', difficulty: 3, points: 3 },
+    { word: 'おめでとう', hint: 'o-me-de-tō', difficulty: 3, points: 3 },
+    { word: 'けいけん', hint: 'kē-ken', difficulty: 3, points: 3 },
+    { word: 'かんきょう', hint: 'kan-kyō', difficulty: 3, points: 3 },
+    { word: 'すばらしい', hint: 'su-ba-ra-shī', difficulty: 3, points: 3 },
+    { word: 'ちょうせん', hint: 'chō-sen', difficulty: 3, points: 3 },
+  ],
+
+  fr: [
+    // Difficulty 1 — basic words (1 point)
+    { word: 'bonjour', hint: 'bohn-ZHOOR', difficulty: 1, points: 1 },
+    { word: 'merci', hint: 'mehr-SEE', difficulty: 1, points: 1 },
+    { word: 'chat', hint: 'shah', difficulty: 1, points: 1 },
+    { word: 'chien', hint: 'shee-EHN', difficulty: 1, points: 1 },
+    { word: 'soleil', hint: 'soh-LAY', difficulty: 1, points: 1 },
+    { word: 'lune', hint: 'lewn', difficulty: 1, points: 1 },
+    { word: 'eau', hint: 'oh', difficulty: 1, points: 1 },
+    { word: 'rouge', hint: 'roozh', difficulty: 1, points: 1 },
+    { word: 'bleu', hint: 'bluh', difficulty: 1, points: 1 },
+    { word: 'maison', hint: 'meh-ZOHN', difficulty: 1, points: 1 },
+    { word: 'livre', hint: 'leevr', difficulty: 1, points: 1 },
+    { word: 'pain', hint: 'pahn', difficulty: 1, points: 1 },
+    { word: 'fleur', hint: 'fluhr', difficulty: 1, points: 1 },
+    { word: 'arbre', hint: 'ahrbr', difficulty: 1, points: 1 },
+    { word: 'vert', hint: 'vehr', difficulty: 1, points: 1 },
+    { word: 'oui', hint: 'wee', difficulty: 1, points: 1 },
+    { word: 'non', hint: 'nohn', difficulty: 1, points: 1 },
+    { word: 'bon', hint: 'bohn', difficulty: 1, points: 1 },
+    { word: 'feu', hint: 'fuh', difficulty: 1, points: 1 },
+    { word: 'ciel', hint: 'see-EHL', difficulty: 1, points: 1 },
+
+    // Difficulty 2 — intermediate (2 points)
+    { word: 'papillon', hint: 'pah-pee-YOHN', difficulty: 2, points: 2 },
+    { word: 'fenêtre', hint: 'fuh-NEHTR', difficulty: 2, points: 2 },
+    { word: 'musique', hint: 'mew-ZEEK', difficulty: 2, points: 2 },
+    { word: 'chocolat', hint: 'shoh-koh-LAH', difficulty: 2, points: 2 },
+    { word: 'famille', hint: 'fah-MEE-yuh', difficulty: 2, points: 2 },
+    { word: 'travail', hint: 'trah-VYE', difficulty: 2, points: 2 },
+    { word: 'montagne', hint: 'mohn-TAH-nyuh', difficulty: 2, points: 2 },
+    { word: 'étoile', hint: 'ay-TWAHL', difficulty: 2, points: 2 },
+    { word: 'oiseau', hint: 'wah-ZOH', difficulty: 2, points: 2 },
+    { word: 'voyage', hint: 'vwah-YAHZH', difficulty: 2, points: 2 },
+    { word: 'jardin', hint: 'zhahr-DAHN', difficulty: 2, points: 2 },
+    { word: 'fromage', hint: 'froh-MAHZH', difficulty: 2, points: 2 },
+
+    // Difficulty 3 — advanced (3 points)
+    { word: 'bibliothèque', hint: 'bee-blee-oh-TEHK', difficulty: 3, points: 3 },
+    { word: 'extraordinaire', hint: 'eks-trah-or-dee-NEHR', difficulty: 3, points: 3 },
+    { word: 'communication', hint: 'koh-mew-nee-kah-SYOHN', difficulty: 3, points: 3 },
+    { word: 'félicitations', hint: 'fay-lee-see-tah-SYOHN', difficulty: 3, points: 3 },
+    { word: 'environnement', hint: 'ahn-vee-rohn-MAHN', difficulty: 3, points: 3 },
+    { word: 'développement', hint: 'day-vlohp-MAHN', difficulty: 3, points: 3 },
+    { word: 'connaissance', hint: 'koh-neh-SAHNS', difficulty: 3, points: 3 },
+    { word: 'compréhension', hint: 'kohm-pray-ahn-SYOHN', difficulty: 3, points: 3 },
+  ],
+
+  pt: [
+    // Difficulty 1 — basic words (1 point)
+    { word: 'olá', hint: 'oh-LAH', difficulty: 1, points: 1 },
+    { word: 'obrigado', hint: 'oh-bree-GAH-doo', difficulty: 1, points: 1 },
+    { word: 'gato', hint: 'GAH-too', difficulty: 1, points: 1 },
+    { word: 'sol', hint: 'sow', difficulty: 1, points: 1 },
+    { word: 'lua', hint: 'LOO-ah', difficulty: 1, points: 1 },
+    { word: 'água', hint: 'AH-gwah', difficulty: 1, points: 1 },
+    { word: 'casa', hint: 'KAH-zah', difficulty: 1, points: 1 },
+    { word: 'livro', hint: 'LEE-vroo', difficulty: 1, points: 1 },
+    { word: 'peixe', hint: 'PAY-shee', difficulty: 1, points: 1 },
+    { word: 'verde', hint: 'VEHR-dee', difficulty: 1, points: 1 },
+    { word: 'azul', hint: 'ah-ZOO', difficulty: 1, points: 1 },
+    { word: 'um', hint: 'oong', difficulty: 1, points: 1 },
+    { word: 'dois', hint: 'doysh', difficulty: 1, points: 1 },
+    { word: 'três', hint: 'trehsh', difficulty: 1, points: 1 },
+    { word: 'bom', hint: 'bohng', difficulty: 1, points: 1 },
+    { word: 'fogo', hint: 'FOH-goo', difficulty: 1, points: 1 },
+    { word: 'flor', hint: 'flohr', difficulty: 1, points: 1 },
+    { word: 'sim', hint: 'seeng', difficulty: 1, points: 1 },
+    { word: 'não', hint: 'nowng', difficulty: 1, points: 1 },
+    { word: 'feliz', hint: 'feh-LEEZ', difficulty: 1, points: 1 },
+
+    // Difficulty 2 — intermediate (2 points)
+    { word: 'borboleta', hint: 'bor-boh-LEH-tah', difficulty: 2, points: 2 },
+    { word: 'coração', hint: 'koh-rah-SOWNG', difficulty: 2, points: 2 },
+    { word: 'janela', hint: 'zhah-NEH-lah', difficulty: 2, points: 2 },
+    { word: 'escola', hint: 'ish-KOH-lah', difficulty: 2, points: 2 },
+    { word: 'família', hint: 'fah-MEE-lyah', difficulty: 2, points: 2 },
+    { word: 'trabalho', hint: 'trah-BAH-lyoo', difficulty: 2, points: 2 },
+    { word: 'montanha', hint: 'mohn-TAH-nyah', difficulty: 2, points: 2 },
+    { word: 'estrela', hint: 'ish-TREH-lah', difficulty: 2, points: 2 },
+    { word: 'música', hint: 'MOO-zee-kah', difficulty: 2, points: 2 },
+    { word: 'chocolate', hint: 'shoh-koh-LAH-chee', difficulty: 2, points: 2 },
+    { word: 'amigo', hint: 'ah-MEE-goo', difficulty: 2, points: 2 },
+    { word: 'bonito', hint: 'boh-NEE-too', difficulty: 2, points: 2 },
+
+    // Difficulty 3 — advanced (3 points)
+    { word: 'biblioteca', hint: 'bee-blee-oh-TEH-kah', difficulty: 3, points: 3 },
+    { word: 'extraordinário', hint: 'ish-trah-or-dee-NAH-ryoo', difficulty: 3, points: 3 },
+    { word: 'comunicação', hint: 'koh-moo-nee-kah-SOWNG', difficulty: 3, points: 3 },
+    { word: 'parabéns', hint: 'pah-rah-BEHNGSH', difficulty: 3, points: 3 },
+    { word: 'experiência', hint: 'ish-peh-ree-EHN-syah', difficulty: 3, points: 3 },
+    { word: 'desenvolvimento', hint: 'deh-zehn-vol-vee-MEHN-too', difficulty: 3, points: 3 },
+    { word: 'conhecimento', hint: 'koh-nyeh-see-MEHN-too', difficulty: 3, points: 3 },
+    { word: 'oportunidade', hint: 'oh-por-too-nee-DAH-dee', difficulty: 3, points: 3 },
+  ],
 };
 
 /**
@@ -187,12 +334,12 @@ export function matchesWord(transcript, targetWord, lang) {
   const t = transcript.toLowerCase().trim();
   const w = targetWord.toLowerCase().trim();
 
-  if (lang === 'zh') {
-    // Chinese: check if target characters appear in transcript
+  if (lang === 'zh' || lang === 'ja') {
+    // CJK: check if target characters appear in transcript
     return t.includes(w);
   }
 
-  // English/Spanish: check if word appears in transcript
+  // Alphabetic languages: check if word appears in transcript
   // Also check individual words in transcript
   if (t.includes(w)) return true;
   return t.split(/\s+/).some((word) => word === w);
