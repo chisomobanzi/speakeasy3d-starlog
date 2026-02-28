@@ -196,11 +196,11 @@ export default function BridgeView() {
         </div>
       ) : (
         <div
-          className="absolute bottom-[12%] left-1/2 -translate-x-1/2 text-center"
+          className="absolute inset-0 flex flex-col items-center justify-center"
           style={{ zIndex: 5 }}
         >
           <div
-            className="bridge-display text-3xl tracking-wider bridge-text-glow-amber"
+            className="bridge-display text-2xl tracking-wider mb-4 bridge-text-glow-amber"
             style={{
               color: `rgba(245, 158, 11, ${0.4 + viewportGlow * 0.6})`,
               transition: 'color 1s',
@@ -208,7 +208,30 @@ export default function BridgeView() {
           >
             {useBridgeStore.getState().sessionActive ? t.enginesOnline : t.awaitingCrew}
           </div>
-          <div className="bridge-mono text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
+          {bigQrUrl && (
+            <img
+              src={bigQrUrl}
+              alt="Scan to join"
+              className="rounded-2xl"
+              style={{
+                width: 400,
+                height: 400,
+                filter: 'drop-shadow(0 0 20px rgba(6, 182, 212, 0.25))',
+              }}
+            />
+          )}
+          <div
+            className="bridge-display text-4xl tracking-[0.5em] mt-4 bridge-text-glow-cyan"
+            style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}
+          >
+            {sessionCode}
+          </div>
+          {connectedCount > 0 && (
+            <div className="bridge-mono text-sm mt-3" style={{ color: 'var(--text-secondary)' }}>
+              {playersConnected(connectedCount)}
+            </div>
+          )}
+          <div className="bridge-mono text-xs mt-2" style={{ color: 'var(--text-dim)' }}>
             {t.speakToPower}
           </div>
         </div>
