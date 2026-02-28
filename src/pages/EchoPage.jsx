@@ -90,7 +90,7 @@ export default function EchoPage() {
   useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
   useEffect(() => { languageRef.current = language; }, [language]);
   const handleMessageRef = useRef(null);
-  const startRecognitionRef = useRef(null);
+  const [asrDebug, setAsrDebug] = useState(''); // visible debug line
 
   // ─── Initialize deviceId (stable across sessions) ───
   useEffect(() => {
@@ -452,80 +452,87 @@ export default function EchoPage() {
   }, []);
 
   // ─── Speech Recognition ───
-  // Create a fresh SpeechRecognition instance. onend always respawns a new one.
   const startRecognition = useCallback(() => {
-    // Clean up any existing instance
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setUseTapMode(true); setAsrDebug('No SR API'); return; }
+
+    // Kill any existing instance (strip onend to prevent cascade)
     if (recognitionRef.current) {
-      recognitionRef.current.onresult = null;
       recognitionRef.current.onend = null;
+      recognitionRef.current.onresult = null;
       recognitionRef.current.onerror = null;
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
     }
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { setUseTapMode(true); return; }
+    let restartCount = 0;
 
-    try {
-      const recognition = new SR();
-      const langInfo = LANGUAGES[languageRef.current];
-      recognition.lang = langInfo?.recognitionLang || 'en-US';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 3;
+    // Self-contained: creates a fresh instance, onend calls itself
+    const spawn = () => {
+      if (phaseRef.current !== 'playing') return;
+      restartCount++;
+      setAsrDebug(`ASR #${restartCount} starting...`);
 
-      recognition.onresult = (event) => {
-        const target = currentWordRef.current?.word;
-        if (!target) return;
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          for (let j = 0; j < event.results[i].length; j++) {
-            const transcript = event.results[i][j].transcript;
-            if (matchesWord(transcript, target, languageRef.current)) {
-              advanceWord();
-              // Graceful stop — onend will create a fresh instance for next word
-              try { recognition.stop(); } catch {}
-              return;
+      try {
+        const recognition = new SR();
+        recognition.lang = LANGUAGES[languageRef.current]?.recognitionLang || 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 3;
+
+        recognition.onresult = (event) => {
+          const target = currentWordRef.current?.word;
+          if (!target) return;
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            for (let j = 0; j < event.results[i].length; j++) {
+              const transcript = event.results[i][j].transcript;
+              setAsrDebug(`heard: "${transcript.slice(0, 20)}" want: "${target}"`);
+              if (matchesWord(transcript, target, languageRef.current)) {
+                advanceWord();
+                return;
+              }
             }
           }
-        }
-      };
+        };
 
-      recognition.onerror = (e) => {
-        if (e.error === 'not-allowed' || e.error === 'service-not-available') {
-          setUseTapMode(true);
-        }
-        // onend fires after onerror — it handles restart
-      };
+        recognition.onerror = (e) => {
+          setAsrDebug(`ASR error: ${e.error}`);
+          if (e.error === 'not-allowed' || e.error === 'service-not-available') {
+            setUseTapMode(true);
+          }
+          // onend fires after this
+        };
 
-      recognition.onend = () => {
-        recognitionRef.current = null;
-        // Respawn a fresh instance after a short delay
-        if (phaseRef.current === 'playing') {
-          setTimeout(() => {
-            if (phaseRef.current === 'playing') {
-              startRecognitionRef.current?.();
-            }
-          }, 150);
-        }
-      };
+        recognition.onend = () => {
+          setAsrDebug(`ASR ended, restarting...`);
+          recognitionRef.current = null;
+          // Respawn fresh instance
+          if (phaseRef.current === 'playing') {
+            setTimeout(spawn, 150);
+          }
+        };
 
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch {
-      setUseTapMode(true);
-    }
+        recognition.start();
+        recognitionRef.current = recognition;
+        setAsrDebug(`ASR #${restartCount} listening (${recognition.lang})`);
+      } catch (err) {
+        setAsrDebug(`ASR spawn failed: ${err.message}`);
+        setUseTapMode(true);
+      }
+    };
+
+    spawn();
   }, [advanceWord]);
-
-  useEffect(() => { startRecognitionRef.current = startRecognition; }, [startRecognition]);
 
   const stopRecognition = useCallback(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.onresult = null;
       recognitionRef.current.onend = null;
+      recognitionRef.current.onresult = null;
       recognitionRef.current.onerror = null;
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
     }
+    setAsrDebug('');
   }, []);
 
   // Start recognition + timer + mic visualizer when playing phase begins
@@ -884,6 +891,14 @@ export default function EchoPage() {
           boxShadow: `0 0 ${glow * 30}px ${rewardFlash ? '#22c55e' : '#06B6D4'}`,
           transition: 'height 0.1s, box-shadow 0.1s, background 0.1s',
         }} />
+
+        {/* ASR debug */}
+        {asrDebug && (
+          <div className="bridge-mono text-[10px] text-center pt-1 truncate"
+            style={{ color: 'rgba(100, 200, 255, 0.6)' }}>
+            {asrDebug}
+          </div>
+        )}
 
         {/* Top: timer + score */}
         <div className="flex items-center justify-between pt-2 mb-4">
