@@ -483,14 +483,15 @@ export default function EchoPage() {
         recognition.onresult = (event) => {
           const target = currentWordRef.current?.word;
           if (!target) return;
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            for (let j = 0; j < event.results[i].length; j++) {
-              const transcript = event.results[i][j].transcript;
-              setAsrDebug(`heard: "${transcript.slice(0, 20)}" want: "${target}"`);
-              if (matchesWord(transcript, target, languageRef.current)) {
-                advanceWord();
-                return;
-              }
+          // Only check the LATEST result — older results accumulate stale transcripts
+          const latest = event.results[event.results.length - 1];
+          if (!latest) return;
+          for (let j = 0; j < latest.length; j++) {
+            const transcript = latest[j].transcript;
+            setAsrDebug(`heard: "${transcript.slice(0, 30)}" want: "${target}"`);
+            if (matchesWord(transcript, target, languageRef.current)) {
+              advanceWord();
+              return;
             }
           }
         };
@@ -637,6 +638,19 @@ export default function EchoPage() {
     setWsConnected(false);
     isJoinedRef.current = false;
   }, []);
+
+  // Leave game → back to lobby (keep session connected)
+  const leaveGame = useCallback(() => {
+    stopRecognition();
+    if (roundTimerRef.current) { clearInterval(roundTimerRef.current); roundTimerRef.current = null; }
+    setPhase('lobby');
+    setCurrentWord(null);
+    currentWordRef.current = null;
+    setWordIndex(0);
+    setWordsCompleted(0);
+    setPersonalScore(0);
+    setAsrDebug('');
+  }, [stopRecognition]);
 
   // ─── Render ───
   const teamColor = teamInfo?.color || 'var(--cyan)';
@@ -984,6 +998,13 @@ export default function EchoPage() {
               {t.sayOrTap}
             </div>
           )}
+          <button
+            onClick={leaveGame}
+            className="w-full mt-3 py-2 rounded-xl bridge-mono text-xs"
+            style={{ color: 'var(--text-dim)', background: 'rgba(148, 163, 184, 0.08)' }}
+          >
+            Leave Game 離開遊戲
+          </button>
         </div>
       </div>
     );
@@ -1032,10 +1053,18 @@ export default function EchoPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="absolute bottom-8 bridge-body text-sm"
-          style={{ color: 'var(--text-dim)' }}
+          className="absolute bottom-8 text-center"
         >
-          {t.waitingNextRound}
+          <div className="bridge-body text-sm mb-3" style={{ color: 'var(--text-dim)' }}>
+            {t.waitingNextRound}
+          </div>
+          <button
+            onClick={leaveGame}
+            className="bridge-mono text-xs px-4 py-2 rounded-xl"
+            style={{ color: 'var(--text-dim)', background: 'rgba(148, 163, 184, 0.1)' }}
+          >
+            Leave Game 離開遊戲
+          </button>
         </motion.div>
       </div>
     );
