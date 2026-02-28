@@ -38,7 +38,7 @@ export default function RoundResults() {
           className="bridge-display text-4xl tracking-wider"
           style={{ color: winnerColor, textShadow: `0 0 30px ${winnerColor}40` }}
         >
-          {roundWinner === 'tie' ? t.tie : `${winnerTeam.name} ${t.wins}`}
+          {roundWinner === 'tie' ? t.tie : `${winnerTeam?.name || ''} ${t.wins}`}
         </div>
         <div className="bridge-mono text-sm mt-2" style={{ color: 'var(--text-dim)' }}>
           {roundN(currentRound)} {t.complete}

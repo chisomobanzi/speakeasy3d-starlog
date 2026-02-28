@@ -13,8 +13,27 @@ export default function useBridgeSocket(sessionCode) {
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
 
+  // Kill an existing WS without triggering reconnect
+  const killWs = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    if (wsRef.current) {
+      // Strip handlers so closing doesn't trigger reconnect cascade
+      wsRef.current.onclose = null;
+      wsRef.current.onmessage = null;
+      wsRef.current.onerror = null;
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
+    }
+  }, []);
+
   const connect = useCallback(() => {
     if (!sessionCode) return;
+
+    // Clean up any existing connection first
+    killWs();
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
@@ -46,7 +65,6 @@ export default function useBridgeSocket(sessionCode) {
           case 'joined':
             if (msg.devices) {
               store.setConnectedDevices(msg.devices);
-              // Also register as players
               msg.devices.forEach((d) => {
                 if (d.name) {
                   store.addPlayer({
@@ -61,7 +79,6 @@ export default function useBridgeSocket(sessionCode) {
 
           case 'echo_connected':
             store.addConnectedDevice(msg.device);
-            // Register as player if they have a name
             if (msg.device?.name) {
               store.addPlayer({
                 id: msg.device.deviceId,
@@ -80,7 +97,6 @@ export default function useBridgeSocket(sessionCode) {
             store.setRemoteVolume(msg.deviceId, msg.volume, msg.isSpeaking);
             break;
 
-          // Player game events (relayed from echo → bridge)
           case 'player:word_scored':
             store.scoreWord({
               playerId: msg.deviceId,
@@ -96,6 +112,7 @@ export default function useBridgeSocket(sessionCode) {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = null;
+        // Only reconnect if this is still the active WS (not replaced by a new one)
         reconnectTimerRef.current = setTimeout(connect, 2000);
       };
 
@@ -105,21 +122,13 @@ export default function useBridgeSocket(sessionCode) {
     } catch {
       // Will retry via reconnect
     }
-  }, [sessionCode]);
+  }, [sessionCode, killWs]);
 
   const disconnect = useCallback(() => {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    killWs();
     setConnected(false);
-  }, []);
+  }, [killWs]);
 
-  // Send a message to all echoes in the session (via server relay)
   const send = useCallback((data) => {
     if (wsRef.current?.readyState === 1) {
       wsRef.current.send(JSON.stringify(data));

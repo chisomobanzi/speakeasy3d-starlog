@@ -60,6 +60,14 @@ export default function EchoPage() {
   const [roundNumber, setRoundNumber] = useState(0);
   const [roundWinner, setRoundWinner] = useState(null);
 
+  // ─── Audio visualization ───
+  const [micVolume, setMicVolume] = useState(0); // 0–1
+  const [rewardFlash, setRewardFlash] = useState(false);
+  const micStreamRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const micRafRef = useRef(null);
+
   // ─── Refs ───
   const wsRef = useRef(null);
   const deviceIdRef = useRef(null);
@@ -308,6 +316,24 @@ export default function EchoPage() {
 
       case 'game:play':
         if (phaseRef.current !== 'playing') {
+          // Late join — missed countdown, so initialize word queue now
+          if (!currentWordRef.current) {
+            const me = msg.players?.find((p) => p.id === deviceIdRef.current);
+            if (me) {
+              setTeam(me.team);
+              const tm = msg.teams?.[me.team];
+              if (tm) setTeamInfo({ name: tm.name, color: tm.color });
+            }
+            setRoundTimeLeft(msg.duration || 60);
+            setWordsCompleted(0);
+            setPersonalScore(0);
+            const lang = languageRef.current || 'en';
+            const queue = getWordQueue(lang);
+            wordQueueRef.current = queue;
+            setWordIndex(0);
+            setCurrentWord(queue[0] || null);
+            currentWordRef.current = queue[0] || null;
+          }
           setPhase('playing');
         }
         break;
@@ -370,6 +396,8 @@ export default function EchoPage() {
     setWordsCompleted((w) => w + 1);
     setPersonalScore((s) => s + points);
     setLastScored({ word: word.word, points });
+    setRewardFlash(true);
+    setTimeout(() => setRewardFlash(false), 400);
 
     const ws = wsRef.current;
     if (ws?.readyState === 1) {
@@ -397,6 +425,26 @@ export default function EchoPage() {
     }
 
     setTimeout(() => setLastScored(null), 600);
+  }, []);
+
+  // ─── Skip word (no points) ───
+  const skipWord = useCallback(() => {
+    const word = currentWordRef.current;
+    if (!word) return;
+
+    const nextIdx = wordQueueRef.current.indexOf(word) + 1;
+    if (nextIdx < wordQueueRef.current.length) {
+      const next = wordQueueRef.current[nextIdx];
+      setCurrentWord(next);
+      currentWordRef.current = next;
+      setWordIndex(nextIdx);
+    } else {
+      const queue = getWordQueue(languageRef.current || 'en');
+      wordQueueRef.current = queue;
+      setCurrentWord(queue[0]);
+      currentWordRef.current = queue[0];
+      setWordIndex(0);
+    }
   }, []);
 
   // ─── Speech Recognition ───
@@ -459,7 +507,7 @@ export default function EchoPage() {
     }
   }, []);
 
-  // Start recognition + timer when playing phase begins
+  // Start recognition + timer + mic visualizer when playing phase begins
   useEffect(() => {
     if (phase !== 'playing') return;
     if (!useTapMode) startRecognition();
@@ -468,12 +516,51 @@ export default function EchoPage() {
       setRoundTimeLeft((v) => Math.max(0, v - 1));
     }, 1000);
 
+    // ─── Mic amplitude visualization ───
+    let cancelled = false;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        micStreamRef.current = stream;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.7;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+        const data = new Uint8Array(analyser.frequencyBinCount);
+
+        const tick = () => {
+          if (cancelled) return;
+          analyser.getByteFrequencyData(data);
+          // Average of lower frequencies (voice range)
+          let sum = 0;
+          const bins = Math.min(64, data.length);
+          for (let i = 0; i < bins; i++) sum += data[i];
+          const avg = sum / bins / 255; // 0–1
+          setMicVolume(avg);
+          micRafRef.current = requestAnimationFrame(tick);
+        };
+        micRafRef.current = requestAnimationFrame(tick);
+      } catch {
+        // No mic access — visualization just stays dark
+      }
+    })();
+
     return () => {
+      cancelled = true;
       stopRecognition();
       if (roundTimerRef.current) {
         clearInterval(roundTimerRef.current);
         roundTimerRef.current = null;
       }
+      if (micRafRef.current) cancelAnimationFrame(micRafRef.current);
+      if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; }
+      if (micStreamRef.current) { micStreamRef.current.getTracks().forEach((t) => t.stop()); micStreamRef.current = null; }
+      setMicVolume(0);
     };
   }, [phase, useTapMode, startRecognition, stopRecognition]);
 
@@ -757,10 +844,25 @@ export default function EchoPage() {
     const difficultyLabel = currentWord?.difficulty === 3 ? '★★★' : currentWord?.difficulty === 2 ? '★★' : '★';
     const difficultyColor = currentWord?.difficulty === 3 ? 'var(--amber)' : currentWord?.difficulty === 2 ? 'var(--cyan)' : 'var(--text-dim)';
 
+    // Voice-reactive background intensity
+    const glow = Math.min(micVolume * 2.5, 1); // amplify for visibility
+    const flashBg = rewardFlash
+      ? `rgba(34, 197, 94, ${0.15 + glow * 0.25})`   // green flash on correct
+      : `rgba(6, 182, 212, ${0.03 + glow * 0.22})`;   // blue (fuel) pulse with voice
+
     return (
       <div className="bridge-mode fixed inset-0 flex flex-col p-4"
-        style={{ background: 'var(--bg-deep)' }}>
-        <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: teamColor }} />
+        style={{
+          background: flashBg,
+          transition: rewardFlash ? 'background 0.08s' : 'none',
+        }}>
+        {/* Team bar — pulses blue with voice, green on reward */}
+        <div className="absolute top-0 left-0 right-0" style={{
+          height: 6 + glow * 10,
+          background: rewardFlash ? '#22c55e' : '#06B6D4',
+          boxShadow: `0 0 ${glow * 30}px ${rewardFlash ? '#22c55e' : '#06B6D4'}`,
+          transition: 'height 0.1s, box-shadow 0.1s, background 0.1s',
+        }} />
 
         {/* Top: timer + score */}
         <div className="flex items-center justify-between pt-2 mb-4">
@@ -784,7 +886,7 @@ export default function EchoPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5 }}
                 className="absolute bridge-display text-3xl"
-                style={{ color: 'var(--amber)', top: '30%' }}
+                style={{ color: '#22c55e', top: '30%' }}
               >
                 +{lastScored.points}
               </motion.div>
@@ -829,7 +931,7 @@ export default function EchoPage() {
         <div className="pb-4">
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={advanceWord}
+            onClick={useTapMode ? advanceWord : skipWord}
             className="w-full py-5 rounded-2xl bridge-display text-2xl tracking-wider"
             style={{
               background: useTapMode

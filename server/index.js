@@ -13,7 +13,7 @@ import { WebSocketServer } from 'ws';
 
 const PORT = process.env.PORT || 8080;
 
-// Sessions: code → { bridges: Set<ws>, echoes: Map<ws, deviceInfo> }
+// Sessions: code → { bridges: Set<ws>, echoes: Map<ws, deviceInfo>, lastGameMsg: object|null }
 const sessions = new Map();
 
 const wss = new WebSocketServer({ port: PORT });
@@ -46,7 +46,7 @@ wss.on('connection', (ws) => {
 
       // Create session if it doesn't exist
       if (!sessions.has(sessionCode)) {
-        sessions.set(sessionCode, { bridges: new Set(), echoes: new Map() });
+        sessions.set(sessionCode, { bridges: new Set(), echoes: new Map(), lastGameMsg: null });
       }
 
       const session = sessions.get(sessionCode);
@@ -84,6 +84,12 @@ wss.on('connection', (ws) => {
             }));
           }
         }
+        // Replay last game state so reconnecting echoes catch up
+        if (session.lastGameMsg) {
+          ws.send(JSON.stringify(session.lastGameMsg));
+          console.log(`Replayed ${session.lastGameMsg.type} to ${deviceId}`);
+        }
+
         console.log(`Echo ${deviceId} joined session ${sessionCode} (${session.echoes.size} echoes)`);
       }
       return;
@@ -123,10 +129,12 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // --- GAME EVENTS from bridge → relay to all echoes ---
+    // --- GAME EVENTS from bridge → relay to all echoes + cache ---
     if (msg.type?.startsWith('game:') && role === 'bridge' && sessionCode) {
       const session = sessions.get(sessionCode);
       if (!session) return;
+      // Cache the last game state so reconnecting echoes get caught up
+      session.lastGameMsg = msg;
       const payload = JSON.stringify(msg);
       for (const [echo] of session.echoes) {
         if (echo.readyState === 1) echo.send(payload);

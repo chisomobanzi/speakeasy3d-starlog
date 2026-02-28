@@ -76,6 +76,8 @@ export default function BridgePage() {
         type: 'game:play',
         round: store.currentRound,
         duration: store.roundDuration,
+        players: store.players,
+        teams: store.teams,
       });
     }
 
