@@ -155,6 +155,59 @@ export default function PublicConstellation({
           <circle key={r} cx={CX} cy={CY} r={r} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth={0.5} />
         ))}
 
+        {/* Domain sector wedges */}
+        {taxonomy.domains.map(d => {
+          const count = stars.filter(s => s.domains[0] === d.id).length;
+          const coverage = d.expected ? count / d.expected : 0;
+          const isSel = selectedDomain === d.id;
+
+          let fillOpacity;
+          if (coverage > 0.6) fillOpacity = 0.015;
+          else if (coverage >= 0.15) fillOpacity = 0.03 + (1 - coverage) * 0.04;
+          else fillOpacity = 0.06 + (1 - coverage) * 0.05;
+          if (isSel) fillOpacity *= 2.5;
+
+          const a1 = ((d.angle - SECTOR_SPREAD) * Math.PI) / 180;
+          const a2 = ((d.angle + SECTOR_SPREAD) * Math.PI) / 180;
+          const x1 = CX + Math.cos(a1) * DOMAIN_RADIUS;
+          const y1 = CY + Math.sin(a1) * DOMAIN_RADIUS;
+          const x2 = CX + Math.cos(a2) * DOMAIN_RADIUS;
+          const y2 = CY + Math.sin(a2) * DOMAIN_RADIUS;
+          const large = a2 - a1 > Math.PI ? 1 : 0;
+          const wedge = `M ${CX},${CY} L ${x1},${y1} A ${DOMAIN_RADIUS} ${DOMAIN_RADIUS} 0 ${large} 1 ${x2},${y2} Z`;
+
+          return (
+            <g key={`wedge-${d.id}`}>
+              <path d={wedge} fill={d.color} opacity={fillOpacity}
+                className="transition-opacity duration-500" />
+              <path d={wedge} fill="none" stroke={d.color}
+                strokeWidth={isSel ? 0.8 : 0.3} opacity={isSel ? 0.3 : 0.08}
+                className="transition-opacity duration-500" />
+            </g>
+          );
+        })}
+
+        {/* Ghost stars */}
+        {taxonomy.domains.map(d => {
+          const count = stars.filter(s => s.domains[0] === d.id).length;
+          const missing = Math.max(0, (d.expected || 0) - count);
+          if (missing === 0) return null;
+          const ghosts = Math.min(missing, 50);
+          const rng = seededRandom(d.id.charCodeAt(0) * 9973);
+          return Array.from({ length: ghosts }, (_, i) => {
+            const baseAngle = d.angle ?? 0;
+            const jitter = (rng() - 0.5) * SECTOR_SPREAD * 2;
+            const angle = ((baseAngle + jitter) * Math.PI) / 180;
+            const dist = 60 + rng() * (DOMAIN_RADIUS - 90);
+            const gx = CX + Math.cos(angle) * dist;
+            const gy = CY + Math.sin(angle) * dist;
+            return (
+              <circle key={`ghost-${d.id}-${i}`} cx={gx} cy={gy} r={1.5}
+                fill={d.color} opacity={0.04} />
+            );
+          });
+        })}
+
         {/* Sector lines */}
         {taxonomy.domains.map(d => {
           const angle = ((d.angle ?? 0) * Math.PI) / 180;
