@@ -127,7 +127,10 @@ export const BUILTIN_SOURCES = [
     glow: false,
     adapter_id: null,
     adapter_config: {},
-    supported_languages: ['pwn', 'ami'],
+    supported_languages: [
+      'ami', 'tay', 'xsy', 'ssf', 'sdq', 'bnn', 'pwn', 'dru',
+      'trv', 'ckv', 'tsu', 'xnb', 'sxr', 'pyu', 'tao', 'szy',
+    ],
     is_builtin: true,
     enabled_by_default: true,
     is_searchable: false,

@@ -5,7 +5,10 @@ import { fetchQuickSample } from '../lib/wiktionaryQuickSample';
 import { fetchKlokahSample } from '../lib/klokahFetcher';
 
 // Languages fetched from Klokah instead of Wiktionary
-const KLOKAH_LANGUAGES = new Set(['pwn']);
+const KLOKAH_LANGUAGES = new Set([
+  'ami', 'tay', 'xsy', 'ssf', 'sdq', 'bnn', 'pwn', 'dru',
+  'trv', 'ckv', 'tsu', 'xnb', 'sxr', 'pyu', 'tao', 'szy',
+]);
 
 /**
  * Hook to load constellation data from Supabase and subscribe to real-time signals.

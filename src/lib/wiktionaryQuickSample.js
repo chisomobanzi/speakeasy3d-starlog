@@ -23,7 +23,7 @@ const CATEGORY_MAP = {
   hr: 'Croatian_lemmas', sr: 'Serbian_lemmas', bg: 'Bulgarian_lemmas',
   sk: 'Slovak_lemmas', sl: 'Slovenian_lemmas', lt: 'Lithuanian_lemmas',
   lv: 'Latvian_lemmas', et: 'Estonian_lemmas', ga: 'Irish_lemmas',
-  cy: 'Welsh_lemmas', sn: 'Shona_lemmas', ami: 'Amis_lemmas',
+  cy: 'Welsh_lemmas', sn: 'Shona_lemmas',
 };
 
 // Language code → language name for Wiktionary definition sections
@@ -36,7 +36,7 @@ const LANG_NAME_MAP = {
   fi: 'Finnish', no: 'Norwegian', da: 'Danish', cs: 'Czech', ro: 'Romanian',
   hu: 'Hungarian', uk: 'Ukrainian', ca: 'Catalan', hr: 'Croatian', sr: 'Serbian',
   bg: 'Bulgarian', sk: 'Slovak', sl: 'Slovenian', lt: 'Lithuanian', lv: 'Latvian',
-  et: 'Estonian', ga: 'Irish', cy: 'Welsh', sn: 'Shona', ami: 'Amis',
+  et: 'Estonian', ga: 'Irish', cy: 'Welsh', sn: 'Shona',
 };
 
 const WIKI_API = 'https://en.wiktionary.org/w/api.php';

@@ -49,7 +49,21 @@ export const LANGUAGES = [
   { code: 'cy', name: 'Welsh' },
   { code: 'sn', name: 'Shona' },
   { code: 'ami', name: 'Amis' },
+  { code: 'tay', name: 'Atayal' },
+  { code: 'xsy', name: 'Saisiyat' },
+  { code: 'ssf', name: 'Thao' },
+  { code: 'sdq', name: 'Seediq' },
+  { code: 'bnn', name: 'Bunun' },
   { code: 'pwn', name: 'Paiwan' },
+  { code: 'dru', name: 'Rukai' },
+  { code: 'trv', name: 'Truku' },
+  { code: 'ckv', name: 'Kavalan' },
+  { code: 'tsu', name: 'Tsou' },
+  { code: 'xnb', name: 'Kanakanavu' },
+  { code: 'sxr', name: "Hla'alua" },
+  { code: 'pyu', name: 'Puyuma' },
+  { code: 'tao', name: 'Tao' },
+  { code: 'szy', name: 'Sakizaya' },
 ];
 
 /** Reverse map: language name → ISO code (e.g. 'Spanish' → 'es') */
