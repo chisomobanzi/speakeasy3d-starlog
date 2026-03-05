@@ -44,7 +44,7 @@ export function adaptSeedData(seedData) {
 
   const vocabulary = words.map((w, index) => ({
     id: `${language.code}-${index}`,
-    word: w.shona,
+    word: w.word || w.shona || w[language.code],
     translation: w.english,
     domains: [w.primary_domain, ...(w.secondary_domains || [])],
     subDomain: w.sub_domain,

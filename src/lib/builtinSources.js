@@ -113,6 +113,28 @@ export const BUILTIN_SOURCES = [
     display_order: 50,
   },
 
+  {
+    id: 'klokah',
+    name: 'Klokah',
+    short_name: 'Klokah',
+    description: 'Taiwan Indigenous Languages E-Park',
+    source_type: 'provenance',
+    icon: null,
+    symbol: '\u25C6', // ◆
+    core_color: '#E8833A',
+    scale: 0.8,
+    opacity: 0.7,
+    glow: false,
+    adapter_id: null,
+    adapter_config: {},
+    supported_languages: ['pwn', 'ami'],
+    is_builtin: true,
+    enabled_by_default: true,
+    is_searchable: false,
+    is_importable: false,
+    display_order: 55,
+  },
+
   // --- Search sources ---
   {
     id: 'personal',

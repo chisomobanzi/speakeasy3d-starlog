@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { adaptSupabaseData } from '../lib/constellation-adapter';
 import { fetchQuickSample } from '../lib/wiktionaryQuickSample';
+import { fetchKlokahSample } from '../lib/klokahFetcher';
+
+// Languages fetched from Klokah instead of Wiktionary
+const KLOKAH_LANGUAGES = new Set(['pwn']);
 
 /**
  * Hook to load constellation data from Supabase and subscribe to real-time signals.
@@ -85,7 +89,10 @@ export function useConstellation(languageCode) {
     setDiscoveryProgress({ fetched: 0, total: 0, words: [] });
 
     try {
-      const result = await fetchQuickSample(langCode, (progress) => {
+      const fetcher = KLOKAH_LANGUAGES.has(langCode)
+        ? fetchKlokahSample
+        : fetchQuickSample;
+      const result = await fetcher(langCode, (progress) => {
         // Stream partial results into the constellation as they arrive
         if (progress.words.length > 0) {
           setDiscoveryProgress(progress);

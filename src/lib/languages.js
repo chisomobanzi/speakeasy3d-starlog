@@ -49,6 +49,7 @@ export const LANGUAGES = [
   { code: 'cy', name: 'Welsh' },
   { code: 'sn', name: 'Shona' },
   { code: 'ami', name: 'Amis' },
+  { code: 'pwn', name: 'Paiwan' },
 ];
 
 /** Reverse map: language name → ISO code (e.g. 'Spanish' → 'es') */
