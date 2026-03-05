@@ -162,9 +162,9 @@ export default function PublicConstellation({
           const isSel = selectedDomain === d.id;
 
           let fillOpacity;
-          if (coverage > 0.6) fillOpacity = 0.015;
-          else if (coverage >= 0.15) fillOpacity = 0.03 + (1 - coverage) * 0.04;
-          else fillOpacity = 0.06 + (1 - coverage) * 0.05;
+          if (coverage > 0.4) fillOpacity = 0.01;
+          else if (coverage >= 0.1) fillOpacity = 0.015 + (1 - coverage) * 0.02;
+          else fillOpacity = 0.05 + (1 - coverage) * 0.06;
           if (isSel) fillOpacity *= 2.5;
 
           const a1 = ((d.angle - SECTOR_SPREAD) * Math.PI) / 180;
