@@ -23,9 +23,6 @@ import DeckDetailPage from './pages/DeckDetailPage';
 import CommunityPage from './pages/CommunityPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import ConstellationPage from './pages/ConstellationPage';
-import BridgePage from './pages/BridgePage';
-import EchoPage from './pages/EchoPage';
-
 // Protected route wrapper
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -86,12 +83,6 @@ function AppRoutes() {
       {/* Constellation view (fullscreen, no AppShell) */}
       <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
       <Route path="/constellation" element={<ConstellationPage defaultLanguage="sn" />} />
-
-      {/* Bridge Mode (fullscreen, no AppShell) */}
-      <Route path="/bridge" element={<BridgePage />} />
-
-      {/* Echo — phone companion (fullscreen, no AppShell) */}
-      <Route path="/echo" element={<EchoPage />} />
 
       {/* App routes with AppShell layout */}
       <Route element={<AppShell />}>
