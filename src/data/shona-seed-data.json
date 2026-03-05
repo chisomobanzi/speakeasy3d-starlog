@@ -9,7 +9,7 @@
       "id": "1",
       "name": "Universe & Creation",
       "short": "Universe",
-      "expected": 320,
+      "expected": 106,
       "angle": 0,
       "color": "#4ECDC4"
     },
@@ -17,7 +17,7 @@
       "id": "2",
       "name": "Person",
       "short": "Person",
-      "expected": 280,
+      "expected": 137,
       "angle": 40,
       "color": "#FF6B8A"
     },
@@ -25,7 +25,7 @@
       "id": "3",
       "name": "Language & Thought",
       "short": "Mind",
-      "expected": 250,
+      "expected": 236,
       "angle": 80,
       "color": "#CE93D8"
     },
@@ -33,7 +33,7 @@
       "id": "4",
       "name": "Social Behavior",
       "short": "Social",
-      "expected": 380,
+      "expected": 332,
       "angle": 120,
       "color": "#FFB347"
     },
@@ -41,7 +41,7 @@
       "id": "5",
       "name": "Daily Life",
       "short": "Daily Life",
-      "expected": 300,
+      "expected": 100,
       "angle": 160,
       "color": "#7ED87E"
     },
@@ -49,7 +49,7 @@
       "id": "6",
       "name": "Work & Occupation",
       "short": "Work",
-      "expected": 340,
+      "expected": 247,
       "angle": 200,
       "color": "#A5D6A7"
     },
@@ -57,7 +57,7 @@
       "id": "7",
       "name": "Physical Actions",
       "short": "Actions",
-      "expected": 220,
+      "expected": 176,
       "angle": 240,
       "color": "#82B1FF"
     },
@@ -65,7 +65,7 @@
       "id": "8",
       "name": "States",
       "short": "States",
-      "expected": 200,
+      "expected": 290,
       "angle": 280,
       "color": "#FFAB91"
     },
@@ -73,7 +73,7 @@
       "id": "9",
       "name": "Grammar",
       "short": "Grammar",
-      "expected": 150,
+      "expected": 168,
       "angle": 320,
       "color": "#B0BEC5"
     }

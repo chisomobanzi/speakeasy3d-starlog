@@ -42,23 +42,7 @@ const LANG_NAME_MAP = {
 const WIKI_API = 'https://en.wiktionary.org/w/api.php';
 const WIKI_REST = 'https://en.wiktionary.org/api/rest_v1/page/definition';
 
-// Default SIL domains (shared across all languages)
-const SIL_DOMAINS = [
-  { id: '1', name: 'Universe & Creation', short: 'Universe', expected: 320, angle: 0, color: '#4ECDC4' },
-  { id: '2', name: 'Person', short: 'Person', expected: 280, angle: 40, color: '#FF6B8A' },
-  { id: '3', name: 'Language & Thought', short: 'Mind', expected: 250, angle: 80, color: '#CE93D8' },
-  { id: '4', name: 'Social Behavior', short: 'Social', expected: 380, angle: 120, color: '#FFB347' },
-  { id: '5', name: 'Daily Life', short: 'Daily Life', expected: 300, angle: 160, color: '#7ED87E' },
-  { id: '6', name: 'Work & Occupation', short: 'Work', expected: 340, angle: 200, color: '#A5D6A7' },
-  { id: '7', name: 'Physical Actions', short: 'Actions', expected: 220, angle: 240, color: '#82B1FF' },
-  { id: '8', name: 'States', short: 'States', expected: 200, angle: 280, color: '#FFAB91' },
-  { id: '9', name: 'Grammar', short: 'Grammar', expected: 150, angle: 320, color: '#B0BEC5' },
-];
-
-const DOMAIN_ICONS = {
-  '1': '\u{1F30D}', '2': '\u{1F9D1}', '3': '\u{1F4AD}', '4': '\u{1F91D}',
-  '5': '\u{1F3E0}', '6': '\u{1F528}', '7': '\u{1F3C3}', '8': '\u{1F522}', '9': '\u{1F524}',
-};
+import { CANONICAL_SIL_DOMAINS } from './sil-domains';
 
 function stripHtml(html) {
   return html
@@ -191,15 +175,7 @@ export async function fetchQuickSample(languageCode, onProgress) {
 
   if (words.length === 0) return null;
 
-  const domains = SIL_DOMAINS.map(d => ({
-    id: d.id,
-    name: d.name,
-    nameLocal: d.short,
-    color: d.color,
-    icon: DOMAIN_ICONS[d.id] || '\u{2B50}',
-    expected: d.expected,
-    angle: d.angle,
-  }));
+  const domains = CANONICAL_SIL_DOMAINS;
 
   return {
     language: {

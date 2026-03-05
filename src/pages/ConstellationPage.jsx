@@ -25,6 +25,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAppStore } from '../stores/appStore';
 import { getReviewStats } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
+import { CANONICAL_SIL_DOMAINS } from '../lib/sil-domains';
 import starlogLogo from '../logo_starlog.svg';
 import seedData from '../data/shona-seed-data.json';
 
@@ -129,18 +130,7 @@ export default function ConstellationPage({ defaultLanguage }) {
   // Build live discovery data from progress (words stream in as they arrive)
   const discoveryData = useMemo(() => {
     if (!discoveryProgress?.words?.length) return null;
-    // Reuse the same SIL domains for any language
-    const domainDefs = [
-      { id: '1', name: 'Universe & Creation', nameLocal: 'Universe', color: '#4ECDC4', icon: '\u{1F30D}', expected: 320, angle: 0 },
-      { id: '2', name: 'Person', nameLocal: 'Person', color: '#FF6B8A', icon: '\u{1F9D1}', expected: 280, angle: 40 },
-      { id: '3', name: 'Language & Thought', nameLocal: 'Mind', color: '#CE93D8', icon: '\u{1F4AD}', expected: 250, angle: 80 },
-      { id: '4', name: 'Social Behavior', nameLocal: 'Social', color: '#FFB347', icon: '\u{1F91D}', expected: 380, angle: 120 },
-      { id: '5', name: 'Daily Life', nameLocal: 'Daily Life', color: '#7ED87E', icon: '\u{1F3E0}', expected: 300, angle: 160 },
-      { id: '6', name: 'Work & Occupation', nameLocal: 'Work', color: '#A5D6A7', icon: '\u{1F528}', expected: 340, angle: 200 },
-      { id: '7', name: 'Physical Actions', nameLocal: 'Actions', color: '#82B1FF', icon: '\u{1F3C3}', expected: 220, angle: 240 },
-      { id: '8', name: 'States', nameLocal: 'States', color: '#FFAB91', icon: '\u{1F522}', expected: 200, angle: 280 },
-      { id: '9', name: 'Grammar', nameLocal: 'Grammar', color: '#B0BEC5', icon: '\u{1F524}', expected: 150, angle: 320 },
-    ];
+    const domainDefs = CANONICAL_SIL_DOMAINS;
     const langNameStr = LANGUAGES.find(l => l.code === languageCode)?.name || languageCode;
     return {
       language: { code: languageCode, name: langNameStr },
@@ -740,6 +730,7 @@ function ConstellationSidebar({
           lineHeight: 1.5,
         }}>
           Domain structure: SIL International Semantic Domains v4 (semdom.org). CC BY-SA 4.0.
+          Expected counts: 1,792 distinct sub-domains across 9 top-level categories.
           Originally developed from Bantu languages (Kifuliiru, Gikuyu, Lugwere).
         </div>
       </div>
