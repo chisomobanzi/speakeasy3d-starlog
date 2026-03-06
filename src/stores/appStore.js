@@ -35,6 +35,9 @@ export const useAppStore = create(
         notificationsEnabled: true,
         soundEnabled: true,
         hapticEnabled: true,
+        autoPlayTTS: false,
+        reviewFrontSide: 'word',
+        reviewMethod: 'srs',
       },
 
       // Actions

@@ -51,8 +51,12 @@ export default function ReviewMode({
   const [results, setResults] = useState([]);
   const [isComplete, setIsComplete] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [frontSide, setFrontSide] = useState('word');
-  const [reviewMethod, setReviewMethod] = useState('srs');
+
+  // Persisted review preferences
+  const frontSide = useAppStore((s) => s.preferences.reviewFrontSide ?? 'word');
+  const reviewMethod = useAppStore((s) => s.preferences.reviewMethod ?? 'srs');
+  const updatePreferences = useAppStore((s) => s.updatePreferences);
+  const setFrontSide = useCallback((v) => updatePreferences({ reviewFrontSide: v }), [updatePreferences]);
 
   // Swipe tracking
   const [activeSwipe, setActiveSwipe] = useState(null); // 'up' | 'down' | 'right' | null
@@ -99,7 +103,7 @@ export default function ReviewMode({
   }, [currentEntry, currentIndex, localEntries.length, onUpdateEntry, cardX, cardY]);
 
   const handleReviewMethodChange = useCallback((method) => {
-    setReviewMethod(method);
+    updatePreferences({ reviewMethod: method });
     const remaining = localEntries.slice(currentIndex);
     let reordered;
     if (method === 'random') {
@@ -435,6 +439,7 @@ export default function ReviewMode({
 function ReviewSettings({ frontSide, setFrontSide, reviewMethod, onReviewMethodChange, onClose }) {
   const autoPlayTTS = useAppStore((s) => s.preferences.autoPlayTTS ?? false);
   const updatePreferences = useAppStore((s) => s.updatePreferences);
+  // frontSide/reviewMethod come from props (already wired to store in parent)
 
   return (
     <motion.div
