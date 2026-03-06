@@ -1,9 +1,43 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, HelpCircle, RotateCcw, Volume2, Settings } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { X, Check, HelpCircle, RotateCcw, Volume2, Settings, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import { calculateNextReview, QUALITY, sortByPriority } from '../../lib/srs';
+import { useAppStore } from '../../stores/appStore';
+
+// Browser TTS helper
+function speakWord(text, lang = 'en') {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang;
+  utterance.rate = 0.85;
+  window.speechSynthesis.speak(utterance);
+}
+
+// Swipe direction thresholds
+const SWIPE_THRESHOLD = 60;
+
+function getSwipeDirection(dx, dy) {
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) return null;
+
+  // Primarily vertical
+  if (absDy > absDx) {
+    return dy < 0 ? 'up' : 'down';
+  }
+  // Primarily horizontal
+  return dx > 0 ? 'right' : null; // only right swipe matters
+}
+
+const SWIPE_LABELS = {
+  down: { label: 'Again', color: '#ef4444', icon: ChevronDown, quality: QUALITY.AGAIN },
+  right: { label: 'Good', color: '#22c55e', icon: ChevronRight, quality: QUALITY.GOOD },
+  up: { label: 'Easy', color: '#06b6d4', icon: ChevronUp, quality: QUALITY.EASY },
+};
 
 export default function ReviewMode({
   entries,
@@ -20,33 +54,49 @@ export default function ReviewMode({
   const [frontSide, setFrontSide] = useState('word');
   const [reviewMethod, setReviewMethod] = useState('srs');
 
+  // Swipe tracking
+  const [activeSwipe, setActiveSwipe] = useState(null); // 'up' | 'down' | 'right' | null
+  const touchStartRef = useRef(null);
+  const cardX = useMotionValue(0);
+  const cardY = useMotionValue(0);
+  const cardRotate = useTransform(cardX, [-200, 0, 200], [-8, 0, 8]);
+  const cardOpacity = useTransform(
+    [cardX, cardY],
+    ([x, y]) => {
+      const dist = Math.sqrt(x * x + y * y);
+      return dist > 150 ? 0.5 : 1;
+    }
+  );
+
+  // Settings from store
+  const autoPlayTTS = useAppStore((s) => s.preferences.autoPlayTTS ?? false);
+
   const currentEntry = localEntries[currentIndex];
   const progress = ((currentIndex) / localEntries.length) * 100;
 
   const handleAnswer = useCallback(async (quality) => {
     if (!currentEntry) return;
 
-    // Calculate new SRS data
     const srsUpdate = calculateNextReview(currentEntry, quality);
 
-    // Record result
     setResults(prev => [...prev, {
       entry: currentEntry,
       quality,
       srsUpdate,
     }]);
 
-    // Update entry in database
     await onUpdateEntry?.(currentEntry.id, srsUpdate);
 
-    // Move to next or complete
     if (currentIndex + 1 >= localEntries.length) {
       setIsComplete(true);
     } else {
       setCurrentIndex(prev => prev + 1);
       setShowAnswer(false);
+      // Reset card position
+      cardX.set(0);
+      cardY.set(0);
     }
-  }, [currentEntry, currentIndex, localEntries.length, onUpdateEntry]);
+  }, [currentEntry, currentIndex, localEntries.length, onUpdateEntry, cardX, cardY]);
 
   const handleReviewMethodChange = useCallback((method) => {
     setReviewMethod(method);
@@ -64,12 +114,78 @@ export default function ReviewMode({
     setLocalEntries([...localEntries.slice(0, currentIndex), ...reordered]);
   }, [localEntries, currentIndex]);
 
-  const handlePlayAudio = () => {
+  const handlePlayAudio = useCallback(() => {
     if (currentEntry?.audio_url) {
       const audio = new Audio(currentEntry.audio_url);
       audio.play();
+    } else if (currentEntry?.word) {
+      speakWord(currentEntry.word, currentEntry.language || 'en');
     }
-  };
+  }, [currentEntry]);
+
+  // Auto-play TTS when card changes
+  useEffect(() => {
+    if (autoPlayTTS && currentEntry && !showAnswer) {
+      const timer = setTimeout(() => {
+        if (frontSide === 'word') {
+          handlePlayAudio();
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, autoPlayTTS, currentEntry, frontSide, handlePlayAudio, showAnswer]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = useCallback((e) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!touchStartRef.current || !showAnswer) return;
+
+    const dx = e.touches[0].clientX - touchStartRef.current.x;
+    const dy = e.touches[0].clientY - touchStartRef.current.y;
+
+    cardX.set(dx);
+    cardY.set(dy);
+
+    const dir = getSwipeDirection(dx, dy);
+    setActiveSwipe(dir);
+  }, [showAnswer, cardX, cardY]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchStartRef.current) return;
+
+    const dx = cardX.get();
+    const dy = cardY.get();
+    const dir = getSwipeDirection(dx, dy);
+
+    if (showAnswer && dir && SWIPE_LABELS[dir]) {
+      // Animate card off-screen then answer
+      const targetX = dir === 'right' ? 400 : 0;
+      const targetY = dir === 'up' ? -400 : dir === 'down' ? 400 : 0;
+      animate(cardX, targetX, { duration: 0.2 });
+      animate(cardY, targetY, { duration: 0.2 });
+      setTimeout(() => handleAnswer(SWIPE_LABELS[dir].quality), 200);
+    } else {
+      // Snap back
+      animate(cardX, 0, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(cardY, 0, { type: 'spring', stiffness: 300, damping: 30 });
+    }
+
+    setActiveSwipe(null);
+    touchStartRef.current = null;
+  }, [showAnswer, handleAnswer, cardX, cardY]);
+
+  // Tap to show answer
+  const handleCardTap = useCallback(() => {
+    if (!showAnswer) {
+      setShowAnswer(true);
+    }
+  }, [showAnswer]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -141,17 +257,50 @@ export default function ReviewMode({
         />
       </div>
 
-      {/* Card */}
-      <div className="flex-1 flex items-center justify-center p-4">
+      {/* Card area */}
+      <div
+        className="flex-1 flex items-center justify-center p-4 relative select-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Swipe direction hints (visible when answer shown) */}
+        {showAnswer && (
+          <div className="absolute inset-0 pointer-events-none z-0">
+            {/* Down = Again */}
+            <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center transition-opacity duration-150 ${activeSwipe === 'down' ? 'opacity-100' : 'opacity-30'}`}>
+              <ChevronDown className="w-6 h-6 text-red-400" />
+              <span className="text-xs text-red-400 font-medium">Again</span>
+            </div>
+            {/* Right = Good */}
+            <div className={`absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1 transition-opacity duration-150 ${activeSwipe === 'right' ? 'opacity-100' : 'opacity-30'}`}>
+              <span className="text-xs text-green-400 font-medium">Good</span>
+              <ChevronRight className="w-6 h-6 text-green-400" />
+            </div>
+            {/* Up = Easy */}
+            <div className={`absolute top-20 left-1/2 -translate-x-1/2 flex flex-col items-center transition-opacity duration-150 ${activeSwipe === 'up' ? 'opacity-100' : 'opacity-30'}`}>
+              <span className="text-xs text-cyan-400 font-medium">Easy</span>
+              <ChevronUp className="w-6 h-6 text-cyan-400" />
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={currentEntry.id}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="w-full max-w-lg"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-lg z-10"
+            style={{
+              x: cardX,
+              y: cardY,
+              rotate: cardRotate,
+              opacity: cardOpacity,
+            }}
+            onClick={handleCardTap}
           >
-            <Card className="text-center py-12">
+            <Card className="text-center py-12 cursor-pointer">
               {/* Front */}
               <div className="mb-8">
                 {frontSide === 'word' ? (
@@ -162,22 +311,21 @@ export default function ReviewMode({
                     {currentEntry.phonetic && (
                       <p className="text-slate-500">/{currentEntry.phonetic}/</p>
                     )}
-                    {currentEntry.audio_url && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handlePlayAudio}
-                        className="mt-2"
-                      >
-                        <Volume2 className="w-5 h-5" />
-                      </Button>
-                    )}
                   </>
                 ) : (
                   <h2 className="text-3xl font-bold text-white mb-2">
                     {currentEntry.translation}
                   </h2>
                 )}
+
+                {/* Audio button — always visible */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handlePlayAudio(); }}
+                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors text-slate-300 hover:text-white"
+                >
+                  <Volume2 className="w-5 h-5" />
+                  <span className="text-sm">Play</span>
+                </button>
               </div>
 
               {/* Back */}
@@ -205,16 +353,6 @@ export default function ReviewMode({
                         {currentEntry.phonetic && (
                           <p className="text-slate-500 mb-2">/{currentEntry.phonetic}/</p>
                         )}
-                        {currentEntry.audio_url && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handlePlayAudio}
-                            className="mb-2"
-                          >
-                            <Volume2 className="w-5 h-5" />
-                          </Button>
-                        )}
                         {currentEntry.notes && (
                           <p className="text-slate-400 mt-4">{currentEntry.notes}</p>
                         )}
@@ -223,21 +361,22 @@ export default function ReviewMode({
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Tap hint */}
+              {!showAnswer && (
+                <p className="text-slate-600 text-sm mt-4">Tap to reveal answer</p>
+              )}
             </Card>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Controls */}
+      {/* Controls — desktop fallback buttons, also visible on mobile when answer shown */}
       <div className="p-4 border-t border-slate-800">
         {!showAnswer ? (
-          <Button
-            variant="primary"
-            onClick={() => setShowAnswer(true)}
-            className="w-full py-4"
-          >
-            Show Answer
-          </Button>
+          <div className="text-center text-slate-500 text-sm py-3 hidden md:block">
+            Press Space or tap the card to reveal the answer
+          </div>
         ) : (
           <div className="grid grid-cols-4 gap-2">
             <Button
@@ -279,81 +418,111 @@ export default function ReviewMode({
       {/* Settings panel */}
       <AnimatePresence>
         {showSettings && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-6"
-          >
-            <div className="w-full max-w-sm space-y-8">
-              <h2 className="text-xl font-bold text-white text-center">Settings</h2>
-
-              {/* Card Front toggle */}
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Card Front</label>
-                <div className="flex rounded-lg overflow-hidden border border-slate-700">
-                  <button
-                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                      frontSide === 'word'
-                        ? 'bg-starlog-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
-                    }`}
-                    onClick={() => setFrontSide('word')}
-                  >
-                    Word
-                  </button>
-                  <button
-                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                      frontSide === 'translation'
-                        ? 'bg-starlog-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
-                    }`}
-                    onClick={() => setFrontSide('translation')}
-                  >
-                    Translation
-                  </button>
-                </div>
-              </div>
-
-              {/* Review Method toggle */}
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Review Method</label>
-                <div className="flex rounded-lg overflow-hidden border border-slate-700">
-                  <button
-                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                      reviewMethod === 'srs'
-                        ? 'bg-starlog-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
-                    }`}
-                    onClick={() => handleReviewMethodChange('srs')}
-                  >
-                    SRS
-                  </button>
-                  <button
-                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                      reviewMethod === 'random'
-                        ? 'bg-starlog-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-300'
-                    }`}
-                    onClick={() => handleReviewMethodChange('random')}
-                  >
-                    Random
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                className="w-full mt-6"
-                onClick={() => setShowSettings(false)}
-              >
-                Done
-              </Button>
-            </div>
-          </motion.div>
+          <ReviewSettings
+            frontSide={frontSide}
+            setFrontSide={setFrontSide}
+            reviewMethod={reviewMethod}
+            onReviewMethodChange={handleReviewMethodChange}
+            onClose={() => setShowSettings(false)}
+          />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// Settings panel extracted for clarity
+function ReviewSettings({ frontSide, setFrontSide, reviewMethod, onReviewMethodChange, onClose }) {
+  const autoPlayTTS = useAppStore((s) => s.preferences.autoPlayTTS ?? false);
+  const updatePreferences = useAppStore((s) => s.updatePreferences);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 z-20"
+    >
+      <div className="w-full max-w-sm space-y-8">
+        <h2 className="text-xl font-bold text-white text-center">Settings</h2>
+
+        {/* Card Front toggle */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-2">Card Front</label>
+          <div className="flex rounded-lg overflow-hidden border border-slate-700">
+            <button
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                frontSide === 'word'
+                  ? 'bg-starlog-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+              }`}
+              onClick={() => setFrontSide('word')}
+            >
+              Word
+            </button>
+            <button
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                frontSide === 'translation'
+                  ? 'bg-starlog-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+              }`}
+              onClick={() => setFrontSide('translation')}
+            >
+              Translation
+            </button>
+          </div>
+        </div>
+
+        {/* Review Method toggle */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-2">Review Method</label>
+          <div className="flex rounded-lg overflow-hidden border border-slate-700">
+            <button
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                reviewMethod === 'srs'
+                  ? 'bg-starlog-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+              }`}
+              onClick={() => onReviewMethodChange('srs')}
+            >
+              SRS
+            </button>
+            <button
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                reviewMethod === 'random'
+                  ? 'bg-starlog-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-300'
+              }`}
+              onClick={() => onReviewMethodChange('random')}
+            >
+              Random
+            </button>
+          </div>
+        </div>
+
+        {/* Auto-play TTS toggle */}
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <p className="font-medium text-white">Auto-play audio</p>
+            <p className="text-sm text-slate-400">Speak the word when each card appears</p>
+          </div>
+          <button
+            onClick={() => updatePreferences({ autoPlayTTS: !autoPlayTTS })}
+            className={`relative w-11 h-6 rounded-full transition-colors ${autoPlayTTS ? 'bg-starlog-500' : 'bg-slate-700'}`}
+          >
+            <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${autoPlayTTS ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        <Button
+          variant="primary"
+          className="w-full mt-6"
+          onClick={onClose}
+        >
+          Done
+        </Button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -371,7 +540,7 @@ function ReviewComplete({ results, onClose }) {
         className="text-center"
       >
         <div className="text-6xl mb-4">
-          {percentage >= 80 ? '🎉' : percentage >= 50 ? '👍' : '💪'}
+          {percentage >= 80 ? '\u{1F389}' : percentage >= 50 ? '\u{1F44D}' : '\u{1F4AA}'}
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">
           Review Complete!

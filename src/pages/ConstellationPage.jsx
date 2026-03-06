@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload, Sparkles, Table2 } from 'lucide-react';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload, Sparkles, Table2, Download } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
@@ -25,6 +25,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAppStore } from '../stores/appStore';
 import { getReviewStats } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
+import { exportPng, exportSvg } from '../lib/exportConstellation';
 import { CANONICAL_SIL_DOMAINS } from '../lib/sil-domains';
 import starlogLogo from '../logo_starlog.svg';
 import seedData from '../data/shona-seed-data.json';
@@ -67,6 +68,19 @@ export default function ConstellationPage({ defaultLanguage }) {
 
   const [showSuggest, setShowSuggest] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const constellationRef = useRef(null);
+
+  // UI scale: S=1, M=1.12, L=1.25
+  const UI_SCALES = { S: 1, M: 1.12, L: 1.25 };
+  const [uiScaleKey, setUiScaleKey] = useState(() => localStorage.getItem('starlog-ui-scale') || 'M');
+  const uiScale = UI_SCALES[uiScaleKey] || 1.12;
+  const cycleScale = useCallback(() => {
+    const keys = Object.keys(UI_SCALES);
+    const next = keys[(keys.indexOf(uiScaleKey) + 1) % keys.length];
+    setUiScaleKey(next);
+    localStorage.setItem('starlog-ui-scale', next);
+  }, [uiScaleKey]);
 
   // Detail modal state
   const [detailEntry, setDetailEntry] = useState(null);
@@ -240,7 +254,10 @@ export default function ConstellationPage({ defaultLanguage }) {
   const { language } = displayData;
 
   return (
-    <div className="fixed inset-0 flex" style={{
+    <div className="fixed top-0 left-0 flex" style={{
+      width: `${100 / uiScale}vw`,
+      height: `${100 / uiScale}vh`,
+      zoom: uiScale,
       background: 'radial-gradient(ellipse at center, #0a0d1a 0%, #050710 70%, #020308 100%)',
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
     }}>
@@ -248,7 +265,7 @@ export default function ConstellationPage({ defaultLanguage }) {
       {showStars && <StarsCanvas />}
 
       {/* Viz area */}
-      <div className={`flex-1 relative flex ${viewMode === 'deck' && deckView === 'table' ? '' : 'items-center justify-center'}`}>
+      <div ref={constellationRef} className={`flex-1 relative flex ${viewMode === 'deck' && deckView === 'table' ? '' : 'items-center justify-center'}`}>
         {viewMode === 'deck' && activeDeckId ? (
           deckView === 'table' ? (
             <DeckSpreadsheet
@@ -295,21 +312,59 @@ export default function ConstellationPage({ defaultLanguage }) {
         {viewMode !== 'deck' && (
           <div className="absolute top-3 right-3 z-10 flex gap-2">
             <button
-              className={`px-2.5 py-1 rounded text-[10px] tracking-wider uppercase transition-all ${colorMode === 'domain' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
+              className={`px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all ${colorMode === 'domain' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
               onClick={() => setColorMode('domain')}
             >Color: Domain</button>
             <button
-              className={`px-2.5 py-1 rounded text-[10px] tracking-wider uppercase transition-all ${colorMode === 'source' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
+              className={`px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all ${colorMode === 'source' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
               onClick={() => setColorMode('source')}
             >Color: Source</button>
             <button
-              className={`px-2.5 py-1 rounded text-[10px] tracking-wider uppercase transition-all ${showConnections ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[.04] text-white/40'}`}
+              className={`px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all ${showConnections ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[.04] text-white/40'}`}
               onClick={() => setShowConnections(v => !v)}
             >Links</button>
             <button
-              className={`px-2.5 py-1 rounded text-[10px] tracking-wider uppercase transition-all ${showStars ? 'bg-pink-500/15 text-pink-400' : 'bg-white/[.04] text-white/40'}`}
+              className={`px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all ${showStars ? 'bg-pink-500/15 text-pink-400' : 'bg-white/[.04] text-white/40'}`}
               onClick={() => setShowStars(v => !v)}
             >Stars</button>
+            <div className="relative">
+              <button
+                className="px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all bg-white/[.04] text-white/40 hover:bg-white/[.08] hover:text-white/60"
+                onClick={() => setShowExportMenu(v => !v)}
+                title="Export constellation"
+              >
+                <Download className="w-3.5 h-3.5 inline-block" />
+              </button>
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowExportMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-40 rounded-lg overflow-hidden text-[13px] whitespace-nowrap"
+                    style={{ background: 'rgba(10,12,20,0.95)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    {[
+                      { label: 'PNG (dark bg)', fn: () => { const svg = constellationRef.current?.querySelector('svg'); if (svg) exportPng(svg, { filename: `${languageCode}-constellation.png` }); } },
+                      { label: 'PNG (transparent)', fn: () => { const svg = constellationRef.current?.querySelector('svg'); if (svg) exportPng(svg, { filename: `${languageCode}-constellation.png`, transparent: true }); } },
+                      { label: 'SVG (dark bg)', fn: () => { const svg = constellationRef.current?.querySelector('svg'); if (svg) exportSvg(svg, { filename: `${languageCode}-constellation.svg` }); } },
+                      { label: 'SVG (transparent)', fn: () => { const svg = constellationRef.current?.querySelector('svg'); if (svg) exportSvg(svg, { filename: `${languageCode}-constellation.svg`, transparent: true }); } },
+                    ].map(opt => (
+                      <button
+                        key={opt.label}
+                        className="block w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[.08] hover:text-white transition-colors"
+                        onClick={() => { opt.fn(); setShowExportMenu(false); }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <button
+              className="px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all bg-white/[.04] text-white/40 hover:bg-white/[.08] hover:text-white/60"
+              onClick={cycleScale}
+              title={`Text size: ${uiScaleKey}`}
+            >
+              Aa:{uiScaleKey}
+            </button>
           </div>
         )}
 
@@ -330,10 +385,10 @@ export default function ConstellationPage({ defaultLanguage }) {
               style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
               <div>
-                <p className="text-[11px] text-white font-medium">
+                <p className="text-[13px] text-white font-medium">
                   Discovering {language.name} vocabulary...
                 </p>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[12px] text-slate-400">
                   {discoveryProgress?.words?.length || 0} words found
                 </p>
               </div>
@@ -464,7 +519,7 @@ function FloatingNav({ user, profile, signOut, viewMode, setViewMode }) {
       {/* Logo */}
       <div className="flex items-center gap-2 px-2.5 py-1.5 mb-0.5">
         <img src={starlogLogo} alt="Starlog" className="w-5 h-5" />
-        <span className="text-[11px] font-semibold tracking-wide" style={{ color: 'rgba(213,177,117,0.8)' }}>STARLOG</span>
+        <span className="text-[13px] font-semibold tracking-wide" style={{ color: 'rgba(213,177,117,0.8)' }}>STARLOG</span>
       </div>
       <div className="h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
       {navItems.map((item, i) => (
@@ -498,7 +553,7 @@ function FloatingNavItem({ to, action, icon: Icon, label, accent, active }) {
         style={{ color: iconColor }}
       />
       <span
-        className="text-[11px] whitespace-nowrap transition-colors group-hover:text-white truncate max-w-[100px]"
+        className="text-[13px] whitespace-nowrap transition-colors group-hover:text-white truncate max-w-[100px]"
         style={{ color: textColor }}
       >
         {label}
@@ -591,7 +646,7 @@ function ConstellationSidebar({
         <select
           value={languageCode}
           onChange={handleLanguageChange}
-          className="w-full h-8 px-2 rounded text-[11px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="w-full h-8 px-2 rounded text-[13px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors appearance-none cursor-pointer"
           style={{
             fontFamily: "'JetBrains Mono', monospace",
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
@@ -614,7 +669,7 @@ function ConstellationSidebar({
             value={localQuery}
             onChange={(e) => handleQueryChange(e.target.value)}
             placeholder="Search..."
-            className="w-full h-8 pl-7 pr-7 rounded text-[12px] bg-white/[.06] text-white placeholder:text-white/30 border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+            className="w-full h-8 pl-7 pr-7 rounded text-[14px] bg-white/[.06] text-white placeholder:text-white/30 border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           />
           {localQuery && (
@@ -650,10 +705,10 @@ function ConstellationSidebar({
                       className="w-1.5 h-1.5 rounded-full shrink-0"
                       style={{ backgroundColor: meta?.core_color || '#7BA3E0' }}
                     />
-                    <span className="text-[10px] text-white font-medium truncate flex-1">
+                    <span className="text-[12px] text-white font-medium truncate flex-1">
                       {result.word}
                     </span>
-                    <span className="text-[10px] truncate max-w-[80px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    <span className="text-[12px] truncate max-w-[80px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
                       {result.translation}
                     </span>
                   </button>
@@ -661,7 +716,7 @@ function ConstellationSidebar({
               })}
             </div>
           ) : !isSearching ? (
-            <div className="text-[10px] py-2 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <div className="text-[12px] py-2 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
               No results for &ldquo;{localQuery}&rdquo;
             </div>
           ) : null}
@@ -672,16 +727,16 @@ function ConstellationSidebar({
       <div className="flex-1 overflow-y-auto p-3">
         {/* Header */}
         <div className="text-center pb-3 mb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="text-[28px] font-extrabold text-white">{vocabulary.length}</div>
-          <div className="text-[10px] tracking-[0.15em] uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <div className="text-[30px] font-extrabold text-white">{vocabulary.length}</div>
+          <div className="text-[12px] tracking-[0.15em] uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>
             words documented
           </div>
           {totalExpected > 0 && (
-            <div className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <div className="text-[13px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
               of ~{totalExpected} estimated ({Math.round(vocabulary.length / totalExpected * 100)}%)
             </div>
           )}
-          <div className="text-[10px] mt-1 text-cyan-400">
+          <div className="text-[12px] mt-1 text-cyan-400">
             {crossLinks} cross-domain links
           </div>
         </div>
@@ -700,7 +755,7 @@ function ConstellationSidebar({
 
         {/* Source legend + display filter */}
         <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="text-[10px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <div className="text-[12px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
             Display
           </div>
           {Object.entries(sourceCounts).map(([key, count]) => {
@@ -714,9 +769,9 @@ function ConstellationSidebar({
                 style={{ opacity: isEnabled ? 1 : 0.35 }}
                 onClick={() => toggleConstellationSource(key, allProvenanceIds)}
               >
-                <span className="text-[11px] w-3.5 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
-                <span className="text-[10px] flex-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{style.label}</span>
-                <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{count}</span>
+                <span className="text-[13px] w-3.5 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
+                <span className="text-[12px] flex-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{style.label}</span>
+                <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{count}</span>
               </button>
             );
           })}
@@ -725,7 +780,7 @@ function ConstellationSidebar({
         {/* Attribution */}
         <div className="mt-4 pt-3" style={{
           borderTop: '1px solid rgba(255,255,255,0.08)',
-          fontSize: '8px',
+          fontSize: '10px',
           color: 'rgba(255,255,255,0.2)',
           lineHeight: 1.5,
         }}>
@@ -739,7 +794,7 @@ function ConstellationSidebar({
       <div className="mt-auto shrink-0 p-3 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <button
           onClick={onSuggestWord}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-colors"
           style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.2)' }}
         >
           <Plus className="w-3.5 h-3.5" />
@@ -778,10 +833,10 @@ function DomainRow({ domain, vocabulary, isSelected, onClick, getSourceStyle }) 
       onClick={onClick}
     >
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-semibold" style={{ color: domain.color }}>
+        <span className="text-[12px] font-semibold" style={{ color: domain.color }}>
           {domain.id}. {domain.nameLocal}
         </span>
-        <span className={`text-[10px] ${isCritical ? 'text-red-500 font-bold' : ''}`} style={isCritical ? {} : { color: 'rgba(255,255,255,0.45)' }}>
+        <span className={`text-[12px] ${isCritical ? 'text-red-500 font-bold' : ''}`} style={isCritical ? {} : { color: 'rgba(255,255,255,0.45)' }}>
           {primary.length}/{domain.expected}
         </span>
       </div>
@@ -805,13 +860,13 @@ function DomainRow({ domain, vocabulary, isSelected, onClick, getSourceStyle }) 
           {Object.entries(bySource).map(([src, count]) => {
             const style = getSourceStyle(src);
             return (
-              <span key={src} className="text-[10px]" style={{ color: style.coreColor, opacity: 0.8 }}>
+              <span key={src} className="text-[12px]" style={{ color: style.coreColor, opacity: 0.8 }}>
                 {style.symbol}{count}
               </span>
             );
           })}
           {secondary.length > 0 && (
-            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
               +{secondary.length} cross-refs
             </span>
           )}
@@ -853,13 +908,13 @@ function WordListPopup({ domain, vocabulary, selectedDomain, sourceMap }) {
         fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
       }}
     >
-      <div className="text-[11px] font-bold mb-2" style={{ color: domain.color }}>
+      <div className="text-[13px] font-bold mb-2" style={{ color: domain.color }}>
         {domain.name} &mdash; {domainWords.length} words
       </div>
       {domainWords.slice(0, 20).map(w => {
         const style = getStyle(w.source);
         return (
-          <div key={w.id} className="flex gap-2 mb-0.5 text-[10px]">
+          <div key={w.id} className="flex gap-2 mb-0.5 text-[12px]">
             <span className="w-2.5" style={{ color: style.coreColor }}>{style.symbol}</span>
             <span className="text-white font-semibold min-w-[70px]">{w.word}</span>
             <span style={{ color: 'rgba(255,255,255,0.4)' }}>{w.translation}</span>
@@ -867,18 +922,18 @@ function WordListPopup({ domain, vocabulary, selectedDomain, sourceMap }) {
         );
       })}
       {domainWords.length > 20 && (
-        <div className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        <div className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
           +{domainWords.length - 20} more...
         </div>
       )}
       {crossRefWords.length > 0 && (
         <>
-          <div className="text-[10px] mt-2.5 mb-1 pt-1.5"
+          <div className="text-[12px] mt-2.5 mb-1 pt-1.5"
             style={{ color: 'rgba(255,255,255,0.4)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             Cross-referenced ({crossRefWords.length}):
           </div>
           {crossRefWords.slice(0, 8).map(w => (
-            <div key={w.id} className="flex gap-2 mb-0.5 text-[10px] opacity-60">
+            <div key={w.id} className="flex gap-2 mb-0.5 text-[12px] opacity-60">
               <span className="w-2.5" style={{ color: domain.color }}>&#x2197;</span>
               <span className="text-white font-semibold min-w-[70px]">{w.word}</span>
               <span style={{ color: 'rgba(255,255,255,0.4)' }}>{w.translation}</span>
@@ -938,15 +993,15 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
       <div className="p-3 flex flex-col gap-2.5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>
             <ArrowLeft className="w-3.5 h-3.5" />
             Language View
           </button>
         </div>
 
         <div className="flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-white">My Decks</h3>
-          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{decks.length}</span>
+          <h3 className="text-[15px] font-semibold text-white">My Decks</h3>
+          <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{decks.length}</span>
         </div>
       </div>
 
@@ -959,7 +1014,7 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
         ) : decks.length === 0 ? (
           <div className="text-center py-8">
             <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.15)' }} />
-            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No decks yet</p>
+            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No decks yet</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -971,14 +1026,14 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
               >
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: deck.color || '#10b981' }} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-medium text-white truncate">{deck.name}</div>
+                  <div className="text-[13px] font-medium text-white truncate">{deck.name}</div>
                   {deck.description && (
-                    <div className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{deck.description}</div>
+                    <div className="text-[12px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{deck.description}</div>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{deck.word_count || 0}</span>
-                  <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                  <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{deck.word_count || 0}</span>
+                  <span className="text-[11px] px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
                     {deck.target_language?.toUpperCase()}
                   </span>
                   <button
@@ -999,7 +1054,7 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
       <div className="mt-auto shrink-0 p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-colors"
           style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.2)' }}
         >
           <Plus className="w-3.5 h-3.5" />
@@ -1016,11 +1071,11 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
         footer={
           <>
             <button onClick={() => { setShowCreateModal(false); resetForm(); }}
-              className="px-3 py-1.5 rounded text-[11px] text-slate-400 hover:text-white transition-colors">
+              className="px-3 py-1.5 rounded text-[13px] text-slate-400 hover:text-white transition-colors">
               Cancel
             </button>
             <button onClick={handleCreate} disabled={saving}
-              className="px-3 py-1.5 rounded text-[11px] font-medium transition-colors"
+              className="px-3 py-1.5 rounded text-[13px] font-medium transition-colors"
               style={{ background: 'rgba(6,182,212,0.2)', color: '#22d3ee' }}>
               {saving ? 'Creating...' : 'Create'}
             </button>
@@ -1029,37 +1084,37 @@ function DeckListSidebar({ decks, loading, onSelectDeck, onBack, createDeck, del
       >
         <div className="space-y-3">
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">Name *</label>
+            <label className="block text-[13px] text-slate-400 mb-1">Name *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
               placeholder="e.g., Portuguese Basics"
-              className="w-full h-8 px-2 rounded text-[12px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+              className="w-full h-8 px-2 rounded text-[14px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
             />
           </div>
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">Language Code *</label>
+            <label className="block text-[13px] text-slate-400 mb-1">Language Code *</label>
             <input
               type="text"
               value={formData.target_language}
               onChange={(e) => setFormData(p => ({ ...p, target_language: e.target.value }))}
               placeholder="e.g., pt, sn, ami"
-              className="w-full h-8 px-2 rounded text-[12px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+              className="w-full h-8 px-2 rounded text-[14px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
             />
           </div>
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">Description</label>
+            <label className="block text-[13px] text-slate-400 mb-1">Description</label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
               placeholder="Optional description"
-              className="w-full h-8 px-2 rounded text-[12px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+              className="w-full h-8 px-2 rounded text-[14px] bg-white/[.06] text-white border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
             />
           </div>
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">Color</label>
+            <label className="block text-[13px] text-slate-400 mb-1">Color</label>
             <div className="flex gap-1.5">
               {colorOptions.map(color => (
                 <button key={color} type="button"
@@ -1130,7 +1185,7 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
       <div className="p-3 flex flex-col gap-2.5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>
             <ArrowLeft className="w-3.5 h-3.5" />
             All Decks
           </button>
@@ -1147,9 +1202,9 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
         {/* Deck name */}
         <div className="flex items-center gap-2">
           {deck && <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: deck.color || '#10b981' }} />}
-          <h3 className="text-[13px] font-semibold text-white truncate">{deck?.name || 'Loading...'}</h3>
+          <h3 className="text-[15px] font-semibold text-white truncate">{deck?.name || 'Loading...'}</h3>
           {deck?.target_language && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+            <span className="text-[11px] px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
               {deck.target_language.toUpperCase()}
             </span>
           )}
@@ -1159,20 +1214,20 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
         {entries.length > 0 && (
           <div className="grid grid-cols-4 gap-1.5">
             <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-[13px] font-bold text-white">{stats.new + stats.pending}</div>
-              <div className="text-[9px]" style={{ color: 'rgba(255,255,255,0.35)' }}>New</div>
+              <div className="text-[15px] font-bold text-white">{stats.new + stats.pending}</div>
+              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>New</div>
             </div>
             <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-[13px] font-bold text-yellow-400">{stats.due}</div>
-              <div className="text-[9px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Due</div>
+              <div className="text-[15px] font-bold text-yellow-400">{stats.due}</div>
+              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Due</div>
             </div>
             <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-[13px] font-bold text-green-400">{stats.mastered}</div>
-              <div className="text-[9px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Done</div>
+              <div className="text-[15px] font-bold text-green-400">{stats.mastered}</div>
+              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Done</div>
             </div>
             <div className="text-center py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <div className="text-[13px] font-bold text-cyan-400">{Math.round(stats.averageMastery * 100)}%</div>
-              <div className="text-[9px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Mastery</div>
+              <div className="text-[15px] font-bold text-cyan-400">{Math.round(stats.averageMastery * 100)}%</div>
+              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Mastery</div>
             </div>
           </div>
         )}
@@ -1181,7 +1236,7 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
         <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
           <button
             onClick={() => setDeckView('constellation')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[12px] font-medium transition-all ${
               deckView === 'constellation' ? 'bg-white/[.10] text-white' : 'bg-white/[.02] text-white/40 hover:text-white/60'
             }`}
           >
@@ -1190,7 +1245,7 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
           </button>
           <button
             onClick={() => setDeckView('table')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[12px] font-medium transition-all ${
               deckView === 'table' ? 'bg-white/[.10] text-white' : 'bg-white/[.02] text-white/40 hover:text-white/60'
             }`}
           >
@@ -1208,7 +1263,7 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter entries..."
-              className="w-full h-8 pl-7 pr-7 rounded text-[12px] bg-white/[.06] text-white placeholder:text-white/30 border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
+              className="w-full h-8 pl-7 pr-7 rounded text-[14px] bg-white/[.06] text-white placeholder:text-white/30 border border-white/[.08] focus:border-cyan-500/40 focus:outline-none transition-colors"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             />
             {searchQuery && (
@@ -1229,17 +1284,17 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
         ) : filteredEntries.length === 0 && !searchQuery ? (
           <div className="text-center py-8">
             <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.15)' }} />
-            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No words yet</p>
-            <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>Add words from the language constellation</p>
+            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No words yet</p>
+            <p className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>Add words from the language constellation</p>
           </div>
         ) : filteredEntries.length === 0 && searchQuery ? (
           <div className="text-center py-6">
-            <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No matches for &ldquo;{searchQuery}&rdquo;</p>
+            <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>No matches for &ldquo;{searchQuery}&rdquo;</p>
           </div>
         ) : (
           <div className="space-y-0.5">
             {searchQuery && (
-              <div className="text-[10px] mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <div className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
                 {filteredEntries.length} of {entries.length} entries
               </div>
             )}
@@ -1250,8 +1305,8 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-white/[.05] transition-colors"
               >
                 <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: masteryColor(entry.mastery_level || 0) }} />
-                <span className="text-[11px] text-white font-medium truncate flex-1">{entry.word}</span>
-                <span className="text-[10px] truncate max-w-[80px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{entry.translation}</span>
+                <span className="text-[13px] text-white font-medium truncate flex-1">{entry.word}</span>
+                <span className="text-[12px] truncate max-w-[80px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{entry.translation}</span>
               </button>
             ))}
           </div>
@@ -1260,7 +1315,7 @@ function DeckDetailSidebar({ deck, entries, loading, onBack, onEntryClick, delet
 
       {/* Actions */}
       <div className="mt-auto shrink-0 p-3 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <Link to="/add" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium transition-colors"
+        <Link to="/add" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-colors"
           style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.2)' }}>
           <Plus className="w-3.5 h-3.5" />
           Add Word

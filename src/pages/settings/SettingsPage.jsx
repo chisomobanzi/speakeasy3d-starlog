@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { User, Bell, Globe, Globe2, Shield, LogOut, Smartphone, Upload, Loader2, Plus } from 'lucide-react';
+import { User, Bell, Globe, Globe2, Shield, LogOut, Smartphone, Upload, Loader2, Plus, Volume2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { generatePairingCode } from '../../lib/starlog-api';
@@ -50,6 +50,7 @@ export default function SettingsPage() {
 
   const sections = [
     { id: 'profile', label: 'Profile', icon: User },
+    { id: 'review', label: 'Review', icon: Volume2 },
     { id: 'sources', label: 'Sources', icon: Globe2 },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'language', label: 'Language', icon: Globe },
@@ -144,6 +145,10 @@ export default function SettingsPage() {
                 </div>
               </div>
             </Card>
+          )}
+
+          {activeSection === 'review' && (
+            <ReviewSettingsSection />
           )}
 
           {activeSection === 'notifications' && (
@@ -611,6 +616,55 @@ function SourceToggle({ sourceId }) {
         `}
       />
     </button>
+  );
+}
+
+// Review settings section
+function ReviewSettingsSection() {
+  const autoPlayTTS = useAppStore((s) => s.preferences.autoPlayTTS ?? false);
+  const updatePreferences = useAppStore((s) => s.updatePreferences);
+
+  return (
+    <Card>
+      <h2 className="text-lg font-semibold text-white mb-6">Review Settings</h2>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between py-3 border-b border-slate-800">
+          <div>
+            <p className="font-medium text-white">Auto-play audio</p>
+            <p className="text-sm text-slate-400">Automatically speak each word when a flashcard appears</p>
+          </div>
+          <button
+            onClick={() => updatePreferences({ autoPlayTTS: !autoPlayTTS })}
+            className={`relative w-11 h-6 rounded-full transition-colors ${autoPlayTTS ? 'bg-starlog-500' : 'bg-slate-700'}`}
+          >
+            <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${autoPlayTTS ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        <div className="py-3">
+          <p className="font-medium text-white mb-2">Swipe gestures</p>
+          <p className="text-sm text-slate-400 mb-3">During review, tap to reveal the answer, then swipe to rate:</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-3 text-slate-300">
+              <span className="w-20 text-right text-red-400 font-medium">Swipe down</span>
+              <span className="text-slate-500">&rarr;</span>
+              <span>Again (no recall)</span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <span className="w-20 text-right text-green-400 font-medium">Swipe right</span>
+              <span className="text-slate-500">&rarr;</span>
+              <span>Good (correct)</span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <span className="w-20 text-right text-cyan-400 font-medium">Swipe up</span>
+              <span className="text-slate-500">&rarr;</span>
+              <span>Easy (perfect recall)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 

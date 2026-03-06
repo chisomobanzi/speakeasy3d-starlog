@@ -107,10 +107,10 @@ export default function PublicConstellation({
       {/* Title bar */}
       <div className="absolute top-3 left-3 right-3 z-10 flex justify-between items-start">
         <div>
-          <h1 className="text-sm font-extrabold tracking-wider text-white">
+          <h1 className="text-base font-extrabold tracking-wider text-white">
             {language?.name || 'chiShona'} Language Constellation
           </h1>
-          <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <div className="text-[12px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {stars.length} words &times; 9 SIL semantic domains &times; {crossLinks} cross-domain links
             {isLive && (
               <span className="ml-2 text-emerald-400">
@@ -125,7 +125,7 @@ export default function PublicConstellation({
       {/* Recent signal ticker */}
       {recentSignals.length > 0 && (
         <div className="absolute top-10 left-3 z-10">
-          <div className="text-[10px] px-2 py-1 rounded" style={{ background: 'rgba(10,12,20,0.8)', color: 'rgba(255,255,255,0.4)' }}>
+          <div className="text-[12px] px-2 py-1 rounded" style={{ background: 'rgba(10,12,20,0.8)', color: 'rgba(255,255,255,0.4)' }}>
             {recentSignals[0].word} <span style={{ color: 'rgba(255,255,255,0.25)' }}>appeared in Wikipedia edit</span>
           </div>
         </div>
@@ -360,13 +360,13 @@ export default function PublicConstellation({
               <g className="cursor-pointer"
                 onClick={() => onSelectDomain(selectedDomain === d.id ? null : d.id)}>
                 <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
-                  fill={d.color} fontSize={isSel ? 12 : 10} fontWeight={isSel ? 700 : 500}
+                  fill={d.color} fontSize={isSel ? 14 : 12} fontWeight={isSel ? 700 : 500}
                   fontFamily="'JetBrains Mono', monospace" opacity={isSel ? 1 : 0.75}>
                   {d.nameLocal}
                 </text>
                 <text x={lx} y={ly + 14} textAnchor="middle"
                   fill={isCritical ? '#FF4444' : d.color}
-                  fontSize={9} fontFamily="'JetBrains Mono', monospace" opacity={0.65}>
+                  fontSize={11} fontFamily="'JetBrains Mono', monospace" opacity={0.65}>
                   {count}/{d.expected} ({pct}%)
                 </text>
               </g>
@@ -376,11 +376,11 @@ export default function PublicConstellation({
 
         {/* Center text */}
         <text x={CX} y={CY - 8} textAnchor="middle" fill="rgba(255,255,255,0.25)"
-          fontSize={8} fontFamily="'JetBrains Mono', monospace" letterSpacing="0.2em">
+          fontSize={10} fontFamily="'JetBrains Mono', monospace" letterSpacing="0.2em">
           {language?.name || 'chiShona'}
         </text>
         <text x={CX} y={CY + 6} textAnchor="middle" fill="rgba(255,255,255,0.12)"
-          fontSize={7} fontFamily="'JetBrains Mono', monospace">
+          fontSize={9} fontFamily="'JetBrains Mono', monospace">
           {language?.family || 'S.10 Bantu'}
         </text>
       </svg>
@@ -395,26 +395,26 @@ export default function PublicConstellation({
             borderWidth: 1,
           }}>
           <div className="text-lg font-bold text-white">{hoveredWordInfo.word}</div>
-          <div className="text-[13px] mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          <div className="text-[15px] mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
             {hoveredWordInfo.translation}
           </div>
           <div className="flex gap-2 mt-2 flex-wrap">
-            <span className="text-[10px] px-1.5 py-0.5 rounded"
+            <span className="text-[12px] px-1.5 py-0.5 rounded"
               style={{ background: hoveredWordInfo.domainColor + '25', color: hoveredWordInfo.domainColor }}>
               {taxonomy.domains.find(d => d.id === hoveredWordInfo.domains[0])?.name}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded"
+            <span className="text-[12px] px-1.5 py-0.5 rounded"
               style={{ background: (hoveredWordInfo.srcStyle.coreColor || '#7BA3E0') + '20', color: hoveredWordInfo.srcStyle.coreColor || '#7BA3E0' }}>
               {hoveredWordInfo.srcStyle.symbol} {hoveredWordInfo.srcStyle.label}
             </span>
             {hoveredWordInfo._isExternal && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
+              <span className="text-[12px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
                 search result
               </span>
             )}
           </div>
           {hoveredWordInfo.domains.length > 1 && (
-            <div className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <div className="text-[12px] mt-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
               Also in: {hoveredWordInfo.domains.slice(1).map(id =>
                 taxonomy.domains.find(d => d.id === id)?.nameLocal
               ).filter(Boolean).join(', ')}
