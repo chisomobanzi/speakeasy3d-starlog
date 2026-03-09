@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, MoreVertical, Edit, Trash2, Copy, Volume2, Plus, Loader2 } from 'lucide-react';
 import Card from '../ui/Card';
@@ -23,6 +23,18 @@ export default function EntryCard({
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   const handlePlay = async () => {
     if (!entry.audio_url) return;
@@ -76,7 +88,8 @@ export default function EntryCard({
   return (
     <Card
       hover={!!onClick}
-      className={`relative ${className}`}
+      className={`relative ${showMenu ? 'z-40' : ''} ${className}`}
+      style={showMenu ? { isolation: 'auto' } : undefined}
       onClick={onClick ? () => onClick(entry) : undefined}
     >
       {/* Header */}
@@ -121,7 +134,7 @@ export default function EntryCard({
         </div>
 
         {/* Actions */}
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
           <Button
             variant="ghost"
             size="icon"
@@ -134,7 +147,7 @@ export default function EntryCard({
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="absolute right-0 top-full mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-10"
+              className="absolute right-0 top-full mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50"
             >
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit?.(entry); setShowMenu(false); }}
