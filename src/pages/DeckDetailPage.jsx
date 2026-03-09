@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, BookOpen, Search, X, Upload, LayoutList, Table2, Volume2, Loader2, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -36,6 +36,10 @@ export default function DeckDetailPage() {
   const [ttsBulkRunning, setTtsBulkRunning] = useState(false);
   const [reviewMode, setReviewMode] = useState(null); // 'due' | 'all' | null
   const [reviewEntries, setReviewEntries] = useState([]);
+  const [addWord, setAddWord] = useState('');
+  const [addTranslation, setAddTranslation] = useState('');
+  const [adding, setAdding] = useState(false);
+  const addWordRef = useRef(null);
 
   useEffect(() => {
     loadDeck();
@@ -125,6 +129,25 @@ export default function DeckDetailPage() {
     setReviewMode(null);
     setReviewEntries([]);
     fetchEntries();
+  };
+
+  const handleAddEntry = async (e) => {
+    e.preventDefault();
+    if (!addWord.trim()) return;
+    setAdding(true);
+    const { error } = await createEntry({
+      deck_id: deckId,
+      word: addWord.trim(),
+      translation: addTranslation.trim() || null,
+    });
+    setAdding(false);
+    if (error) { toast.error('Failed to add word'); }
+    else {
+      toast.success(`Added "${addWord.trim()}"`);
+      setAddWord('');
+      setAddTranslation('');
+      addWordRef.current?.focus();
+    }
   };
 
   // Filter entries by search
@@ -430,6 +453,40 @@ export default function DeckDetailPage() {
                 ))}
               </motion.div>
             )}
+
+            {/* Inline Add Card */}
+            <form onSubmit={handleAddEntry}
+              className="rounded-xl border border-dashed border-slate-700 hover:border-cyan-500/30 transition-colors p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2 text-sm text-slate-400 mb-1">
+                <Plus className="w-4 h-4" />
+                <span className="font-medium">Quick add</span>
+              </div>
+              <div className="flex gap-3">
+                <Input
+                  ref={addWordRef}
+                  placeholder="Word or phrase..."
+                  value={addWord}
+                  onChange={(e) => setAddWord(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Translation..."
+                  value={addTranslation}
+                  onChange={(e) => setAddTranslation(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={!addWord.trim() || adding}
+                >
+                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Add
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
