@@ -7,7 +7,6 @@ import PublicConstellation from '../components/starlog/PublicConstellation';
 import ConstellationView from '../components/starlog/ConstellationView';
 import DeckSpreadsheet from '../components/starlog/DeckSpreadsheet';
 import StarsCanvas from '../components/starlog/StarsCanvas';
-import ConstellationHero from '../components/starlog/ConstellationHero';
 import SuggestWordModal from '../components/starlog/SuggestWordModal';
 import ConstellationQR from '../components/starlog/ConstellationQR';
 import WordDetailModal from '../components/starlog/WordDetailModal';
@@ -37,8 +36,7 @@ export default function ConstellationPage({ defaultLanguage }) {
   const navigate = useNavigate();
   const activeLanguage = useAppStore((s) => s.activeLanguage);
   const setActiveLanguage = useAppStore((s) => s.setActiveLanguage);
-  // If neither URL param nor default prop is given, show the hero/language picker
-  const languageCode = urlLanguageCode || defaultLanguage || null;
+  const languageCode = urlLanguageCode || defaultLanguage || activeLanguage || 'sn';
 
   // View mode: 'language' | 'decks' | 'deck'
   const [viewMode, setViewMode] = useState(urlDeckId ? 'deck' : 'language');
@@ -248,8 +246,6 @@ export default function ConstellationPage({ defaultLanguage }) {
     setSavingEntry(null);
     setShowDeckModal(false);
   }, [savingEntry, createEntry, toast, languageCode]);
-
-  if (!languageCode) return <ConstellationHero />;
 
   if (supabaseLoading && !staticData && !discoveryData) {
     return <LoadingScreen message="Loading constellation..." />;
