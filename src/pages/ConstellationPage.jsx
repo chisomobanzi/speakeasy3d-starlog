@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload, Sparkles, Table2, Download } from 'lucide-react';
+import { Search, X, Loader2, BookOpen, Settings, LogIn, LogOut, Plus, Users, QrCode, ArrowLeft, Trash2, Upload, Sparkles, Table2, Download, ChevronDown, Globe } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/ui/LoadingSpinner';
 import PublicConstellation from '../components/starlog/PublicConstellation';
@@ -37,7 +37,8 @@ export default function ConstellationPage({ defaultLanguage }) {
   const navigate = useNavigate();
   const activeLanguage = useAppStore((s) => s.activeLanguage);
   const setActiveLanguage = useAppStore((s) => s.setActiveLanguage);
-  const languageCode = urlLanguageCode || activeLanguage || defaultLanguage || 'sn';
+  // If neither URL param nor default prop is given, show the hero/language picker
+  const languageCode = urlLanguageCode || defaultLanguage || null;
 
   // View mode: 'language' | 'decks' | 'deck'
   const [viewMode, setViewMode] = useState(urlDeckId ? 'deck' : 'language');
@@ -69,6 +70,8 @@ export default function ConstellationPage({ defaultLanguage }) {
   const [showSuggest, setShowSuggest] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showMobileLangPicker, setShowMobileLangPicker] = useState(false);
+  const [showMobileDomains, setShowMobileDomains] = useState(false);
   const constellationRef = useRef(null);
 
   // UI scale: S=1, M=1.12, L=1.25
@@ -308,9 +311,9 @@ export default function ConstellationPage({ defaultLanguage }) {
           />
         )}
 
-        {/* Title bar with controls (language mode only) */}
+        {/* Title bar with controls (language mode only, desktop) */}
         {viewMode !== 'deck' && (
-          <div className="absolute top-3 right-3 z-10 flex gap-2">
+          <div className="hidden md:flex absolute top-3 right-3 z-10 gap-2">
             <button
               className={`px-2.5 py-1 rounded text-[12px] tracking-wider uppercase transition-all ${colorMode === 'domain' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
               onClick={() => setColorMode('domain')}
@@ -378,9 +381,9 @@ export default function ConstellationPage({ defaultLanguage }) {
           />
         )}
 
-        {/* Discovery overlay */}
+        {/* Discovery overlay — desktop only */}
         {discovering && viewMode !== 'deck' && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20">
+          <div className="hidden md:block absolute bottom-16 left-1/2 -translate-x-1/2 z-20">
             <div className="px-5 py-3 rounded-xl backdrop-blur-md flex items-center gap-3"
               style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
@@ -396,17 +399,62 @@ export default function ConstellationPage({ defaultLanguage }) {
           </div>
         )}
 
-        {/* Floating nav */}
-        <FloatingNav
-          user={user}
-          profile={profile}
-          signOut={signOut}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-        />
+        {/* Floating nav — desktop only */}
+        <div className="hidden md:block">
+          <FloatingNav
+            user={user}
+            profile={profile}
+            signOut={signOut}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+          />
+        </div>
+
+        {/* Mobile header */}
+        <div className="md:hidden absolute top-0 left-0 right-0 z-20 px-3 pt-3 pb-2 flex items-center justify-between"
+          style={{ background: 'linear-gradient(to bottom, rgba(5,7,16,0.9) 0%, transparent 100%)' }}>
+          <div className="flex items-center gap-2">
+            <img src={starlogLogo} alt="Starlog" className="w-5 h-5" />
+            <button
+              onClick={() => setShowMobileLangPicker(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <span className="text-[13px] font-semibold text-white">{language?.name || languageCode}</span>
+              <ChevronDown className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[12px] px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+              {baseVocabulary.length} words
+            </span>
+          </div>
+        </div>
+
+        {/* Mobile bottom bar */}
+        <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 px-3 pb-3 safe-bottom">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowMobileDomains(v => !v)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12px] font-medium"
+              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {taxonomy.domains.length} Domains
+            </button>
+            {discovering && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px]"
+                style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)', backdropFilter: 'blur(12px)' }}>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                <span className="text-cyan-400">{discoveryProgress?.words?.length || 0} found...</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Sidebar — switches based on viewMode */}
+      {/* Sidebar — desktop only */}
+      <div className="hidden md:flex">
       {viewMode === 'decks' ? (
         <DeckListSidebar
           decks={decks}
@@ -455,13 +503,91 @@ export default function ConstellationPage({ defaultLanguage }) {
           sourceLoading={sourceLoading}
           onResultClick={(entry) => { setDetailEntry(entry); setShowDetailModal(true); }}
           languageCode={languageCode}
-          onLanguageChange={setActiveLanguage}
+          onLanguageChange={(code) => { setActiveLanguage(code); navigate(`/constellation/${code}`); }}
           sourceMap={sourceMap}
           provenanceSources={provenanceSources}
           getSourceStyle={getSourceStyle}
           onSuggestWord={() => setShowSuggest(true)}
           onShowQR={() => setShowQR(true)}
         />
+      )}
+      </div>
+
+      {/* Mobile language picker overlay */}
+      {showMobileLangPicker && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col"
+          style={{ background: 'rgba(5,7,16,0.97)' }}>
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-lg font-semibold text-white">Choose a language</h2>
+            <button onClick={() => setShowMobileLangPicker(false)} className="p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pb-20">
+            <div className="grid grid-cols-2 gap-2">
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    setActiveLanguage(lang.code);
+                    navigate(`/constellation/${lang.code}`);
+                    setShowMobileLangPicker(false);
+                  }}
+                  className={`text-left p-3 rounded-xl transition-all ${
+                    lang.code === languageCode
+                      ? 'ring-1 ring-cyan-500/50'
+                      : 'hover:bg-white/[.06]'
+                  }`}
+                  style={{
+                    background: lang.code === languageCode ? 'rgba(6,182,212,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <div className="text-[14px] font-medium text-white truncate">{lang.name}</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    {lang.code.toUpperCase()}{lang.family ? ` · ${lang.family}` : ''}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile domains drawer */}
+      {showMobileDomains && (
+        <div className="md:hidden fixed inset-x-0 bottom-0 z-50 max-h-[60vh] flex flex-col rounded-t-2xl"
+          style={{ background: 'rgba(8,10,18,0.97)', borderTop: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)' }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <span className="text-[14px] font-semibold text-white">{baseVocabulary.length} words · {taxonomy.domains.length} domains</span>
+            <button onClick={() => setShowMobileDomains(false)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <X className="w-4 h-4 text-white" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-1">
+            {taxonomy.domains.map(d => {
+              const count = baseVocabulary.filter(w => w.domains.includes(d.id)).length;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => { handleSelectDomain(selectedDomain === d.id ? null : d.id); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                    selectedDomain === d.id ? 'bg-white/[.08]' : 'hover:bg-white/[.04]'
+                  }`}
+                >
+                  <span className="text-[16px]">{d.icon || '●'}</span>
+                  <span className="flex-1 text-left text-[13px] text-white">{d.name}</span>
+                  <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile domains backdrop */}
+      {showMobileDomains && (
+        <div className="md:hidden fixed inset-0 z-40" onClick={() => setShowMobileDomains(false)} />
       )}
 
       {/* Modals */}
@@ -899,7 +1025,7 @@ function WordListPopup({ domain, vocabulary, selectedDomain, sourceMap }) {
 
   return (
     <div
-      className="absolute left-40 top-12 z-[80] rounded-lg p-3 max-w-[280px] max-h-[350px] overflow-y-auto"
+      className="absolute left-2 bottom-24 md:left-40 md:bottom-auto md:top-12 z-[80] rounded-lg p-3 max-w-[280px] max-h-[350px] overflow-y-auto"
       style={{
         background: 'rgba(10,12,20,0.92)',
         backdropFilter: 'blur(10px)',

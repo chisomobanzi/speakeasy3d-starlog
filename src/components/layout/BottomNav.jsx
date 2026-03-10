@@ -1,11 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Search, Plus, Users, BookOpen, Settings } from 'lucide-react';
+import { Search, Sparkles, Users, BookOpen, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
   { path: '/', icon: BookOpen, label: 'Decks' },
   { path: '/search', icon: Search, label: 'Search' },
-  { path: '/add', icon: Plus, label: 'Add', highlight: true },
+  { path: '/constellation', icon: Sparkles, label: 'Explore', highlight: true },
   { path: '/community', icon: Users, label: 'Community' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
@@ -26,6 +26,8 @@ export default function BottomNav({ className = '' }) {
         {navItems.map((item) => {
           const isActive = item.path === '/'
             ? location.pathname === '/' || location.pathname.startsWith('/decks')
+            : item.path === '/constellation'
+            ? location.pathname.startsWith('/constellation')
             : location.pathname.startsWith(item.path);
           const Icon = item.icon;
 
