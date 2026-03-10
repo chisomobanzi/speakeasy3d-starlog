@@ -44,7 +44,7 @@ export default function DeckDetailPage() {
   useEffect(() => {
     loadDeck();
     fetchEntries();
-  }, [deckId]);
+  }, [deckId, getDeck]);
 
   const loadDeck = async () => {
     const deckData = await getDeck(deckId);

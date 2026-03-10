@@ -5,6 +5,18 @@ import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 
+function formatDueDate(dateStr) {
+  const now = new Date();
+  const due = new Date(dateStr);
+  const diffMs = due - now;
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return 'Due now';
+  if (diffDays === 1) return 'Due tomorrow';
+  if (diffDays < 7) return `Due in ${diffDays}d`;
+  if (diffDays < 30) return `Due in ${Math.ceil(diffDays / 7)}w`;
+  return `Due in ${Math.ceil(diffDays / 30)}mo`;
+}
+
 export default function EntryCard({
   entry,
   onClick,
@@ -211,14 +223,23 @@ export default function EntryCard({
           )}
         </div>
 
-        {entry.srs_state === 'active' && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500">Mastery:</span>
-            <span className={getMasteryColor(entry.mastery_level)}>
-              {Math.round((entry.mastery_level || 0) * 100)}%
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3 text-xs">
+          {entry.srs_state === 'new' || entry.srs_state === 'pending' ? (
+            <span className="text-cyan-400">New</span>
+          ) : entry.srs_state === 'active' ? (
+            <>
+              <span className="text-slate-500">Mastery: <span className={getMasteryColor(entry.mastery_level)}>{Math.round((entry.mastery_level || 0) * 100)}%</span></span>
+              <span className="text-slate-600">·</span>
+              {entry.next_review_at && new Date(entry.next_review_at) <= new Date() ? (
+                <span className="text-yellow-400">Due now</span>
+              ) : entry.next_review_at ? (
+                <span className="text-slate-500">{formatDueDate(entry.next_review_at)}</span>
+              ) : null}
+            </>
+          ) : entry.srs_state === 'exclude' ? (
+            <span className="text-slate-600">Excluded</span>
+          ) : null}
+        </div>
       </div>
 
       {/* Source attribution */}

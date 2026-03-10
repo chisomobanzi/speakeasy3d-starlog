@@ -25,7 +25,7 @@ const AuthContext = createContext({});
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(DEV_MODE ? MOCK_USER : null);
   const [profile, setProfile] = useState(DEV_MODE ? MOCK_PROFILE : null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!DEV_MODE);
 
   useEffect(() => {
     // Skip auth setup in dev mode
