@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
+import starlogLogo from '../../logo_starlog.svg';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/Toast';
@@ -55,9 +56,7 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-starlog-400 to-starlog-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">S</span>
-          </div>
+          <img src={starlogLogo} alt="Starlog" className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white">Welcome back</h1>
           <p className="text-slate-400 mt-1">Sign in to continue to Starlog</p>
         </div>

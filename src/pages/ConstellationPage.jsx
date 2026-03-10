@@ -280,9 +280,8 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
         <div className="text-center pt-8 pb-4 px-2">
           <img src={starlogLogo} alt="Starlog" className="w-10 h-10 mx-auto mb-2" />
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-            Language{' '}
             <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              Constellations
+              Starlog
             </span>
           </h1>
           <p className="text-[13px] text-slate-400 max-w-xs mx-auto leading-relaxed">
@@ -587,7 +586,13 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
         <div className="md:hidden absolute top-0 left-0 right-0 z-20 px-3 pt-3 pb-2 flex items-center justify-between"
           style={{ background: 'linear-gradient(to bottom, rgba(5,7,16,0.9) 0%, transparent 100%)' }}>
           <div className="flex items-center gap-2">
-            <img src={starlogLogo} alt="Starlog" className="w-5 h-5" />
+            <button
+              onClick={() => navigate('/constellation')}
+              className="p-1.5 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <ArrowLeft className="w-4 h-4 text-white" />
+            </button>
             <button
               onClick={() => setShowMobileLangPicker(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
