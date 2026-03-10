@@ -31,7 +31,7 @@ import seedData from '../data/shona-seed-data.json';
 
 const SEED_DATA_MAP = { sn: seedData };
 
-export default function ConstellationPage({ defaultLanguage }) {
+export default function ConstellationPage({ defaultLanguage, embedded = false }) {
   const { languageCode: urlLanguageCode, deckId: urlDeckId } = useParams();
   const navigate = useNavigate();
   const activeLanguage = useAppStore((s) => s.activeLanguage);
@@ -254,6 +254,138 @@ export default function ConstellationPage({ defaultLanguage }) {
   const displayData = constellationData || emptyConstellation;
   const { language } = displayData;
 
+  /* ── Embedded mode (inside AppShell, with BottomNav) ── */
+  if (embedded) {
+    return (
+      <div className="min-h-screen pb-4" style={{
+        background: 'radial-gradient(ellipse at center, #0a0d1a 0%, #050710 70%, #020308 100%)',
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
+      }}>
+        {/* Hero header */}
+        <div className="text-center pt-8 pb-4 px-2">
+          <img src={starlogLogo} alt="Starlog" className="w-10 h-10 mx-auto mb-2" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+            Language{' '}
+            <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+              Constellations
+            </span>
+          </h1>
+          <p className="text-[13px] text-slate-400 max-w-xs mx-auto leading-relaxed">
+            Every word is a star. Explore vocabulary mapped across semantic domains.
+          </p>
+        </div>
+
+        {/* Language picker */}
+        <div className="max-w-md mx-auto mb-4 px-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            <select
+              value={languageCode}
+              onChange={(e) => {
+                setActiveLanguage(e.target.value);
+                navigate(`/constellation/${e.target.value}`);
+              }}
+              className="w-full h-10 pl-10 pr-4 rounded-xl text-sm bg-white/[.06] text-white border border-white/[.1] focus:border-cyan-500/40 focus:outline-none transition-colors appearance-none cursor-pointer"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+              }}
+            >
+              {LANGUAGES.map(lang => (
+                <option key={lang.code} value={lang.code} style={{ background: '#0a0d1a', color: '#fff' }}>
+                  {lang.name} ({lang.code.toUpperCase()})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Inline constellation */}
+        <div className="max-w-lg mx-auto aspect-square relative">
+          {discovering && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px]"
+              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)' }}>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+              <span className="text-cyan-400">{discoveryProgress?.words?.length || 0} words found...</span>
+            </div>
+          )}
+          <PublicConstellation
+            language={language}
+            taxonomy={taxonomy}
+            vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
+            selectedDomain={selectedDomain}
+            hoveredWord={hoveredWord}
+            pulseMap={pulseMap}
+            isLive={isLive}
+            recentSignals={recentSignals}
+            colorMode={colorMode}
+            showConnections={showConnections}
+            onHoverWord={setHoveredWord}
+            onSelectDomain={handleSelectDomain}
+            highlightedIds={searchActive ? highlightedIds : null}
+            searchActive={searchActive}
+            onStarClick={handleStarClick}
+            sourceMap={sourceMap}
+          />
+        </div>
+
+        {/* Stats + domains */}
+        <div className="max-w-md mx-auto mt-2 px-2">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[13px] text-white font-semibold">{baseVocabulary.length} words</span>
+            <span className="text-[12px] text-slate-500">{taxonomy.domains.length} domains</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {taxonomy.domains.map(d => {
+              const count = baseVocabulary.filter(w => w.domains.includes(d.id)).length;
+              const isSel = selectedDomain === d.id;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => handleSelectDomain(isSel ? null : d.id)}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-left transition-all ${
+                    isSel ? 'bg-white/[.1] ring-1 ring-white/20' : 'bg-white/[.03] hover:bg-white/[.06]'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] text-white truncate">{d.name}</div>
+                    <div className="text-[10px] text-slate-500">{count}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Expand to fullscreen */}
+          <button
+            onClick={() => navigate(`/constellation/${languageCode}`)}
+            className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-colors hover:bg-white/[.08]"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}
+          >
+            <Sparkles className="w-4 h-4" />
+            Open fullscreen
+          </button>
+        </div>
+
+        {/* Modals */}
+        <WordDetailModal
+          isOpen={showDetailModal}
+          onClose={() => { setShowDetailModal(false); setDetailEntry(null); }}
+          entry={detailEntry}
+          onSaveToDeck={handleSaveToDeckFromDetail}
+        />
+        <AddToDeckModal
+          isOpen={showDeckModal}
+          onClose={() => { setShowDeckModal(false); setSavingEntry(null); }}
+          onSelect={handleDeckSelected}
+        />
+      </div>
+    );
+  }
+
+  /* ── Fullscreen mode ── */
   return (
     <div className="fixed top-0 left-0 flex" style={{
       width: `${100 / uiScale}vw`,

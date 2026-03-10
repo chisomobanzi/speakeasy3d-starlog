@@ -82,7 +82,6 @@ function AppRoutes() {
 
       {/* Constellation view (fullscreen, no AppShell) */}
       <Route path="/constellation/:languageCode" element={<ConstellationPage />} />
-      <Route path="/constellation" element={<ConstellationPage />} />
 
       {/* App routes with AppShell layout */}
       <Route element={<AppShell />}>
@@ -92,6 +91,7 @@ function AppRoutes() {
             <DecksPage />
           </ProtectedRoute>
         } />
+        <Route path="constellation" element={<ConstellationPage embedded />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="community" element={<CommunityPage />} />
 
