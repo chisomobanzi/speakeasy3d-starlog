@@ -126,6 +126,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
 
   // Constellation source filtering
   const enabledCS = useAppStore((s) => s.enabledConstellationSources);
+  const toggleConstellationSource = useAppStore((s) => s.toggleConstellationSource);
 
   const {
     data: supabaseData,
@@ -191,6 +192,20 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
   } = useConstellationSearch(baseVocabulary, taxonomy, languageCode, sourceMap);
 
   const searchActive = searchQuery?.length >= 2;
+
+  // Source counts for display filter
+  const sourceCounts = useMemo(() => {
+    const counts = {};
+    allVocabulary.forEach(w => { counts[w.source] = (counts[w.source] || 0) + 1; });
+    return counts;
+  }, [allVocabulary]);
+
+  const allProvenanceIds = useMemo(
+    () => provenanceSources.map(s => s.id).concat(
+      Object.keys(sourceCounts).filter(k => !provenanceSources.some(s => s.id === k))
+    ),
+    [provenanceSources, sourceCounts]
+  );
 
   // Empty constellation fallback for languages without seed/Supabase data
   const emptyConstellation = useMemo(() => ({
@@ -357,6 +372,34 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
               );
             })}
           </div>
+
+          {/* Sources / Display */}
+          {Object.keys(sourceCounts).length > 0 && (
+            <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="text-[11px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Sources
+              </div>
+              <div className="space-y-0.5">
+                {Object.entries(sourceCounts).map(([key, count]) => {
+                  if (count === 0) return null;
+                  const style = getSourceStyle(key);
+                  const isEnabled = enabledCS === null || enabledCS.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all"
+                      style={{ opacity: isEnabled ? 1 : 0.35, background: isEnabled ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+                      onClick={() => toggleConstellationSource(key, allProvenanceIds)}
+                    >
+                      <span className="text-[14px] w-4 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
+                      <span className="text-[12px] flex-1 text-white/50">{style.label}</span>
+                      <span className="text-[12px] text-white/30">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Expand to fullscreen */}
           <button
@@ -789,6 +832,35 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
                 {showConnections ? 'On' : 'Off'}
               </span>
             </button>
+
+            {/* Source toggles */}
+            {Object.keys(sourceCounts).length > 0 && (
+              <div className="pt-3 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="text-[11px] tracking-[0.15em] uppercase mb-2 px-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  Sources
+                </div>
+                {Object.entries(sourceCounts).map(([key, count]) => {
+                  if (count === 0) return null;
+                  const style = getSourceStyle(key);
+                  const isEnabled = enabledCS === null || enabledCS.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-left transition-all"
+                      style={{ opacity: isEnabled ? 1 : 0.35, background: isEnabled ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+                      onClick={() => toggleConstellationSource(key, allProvenanceIds)}
+                    >
+                      <span className="text-[15px] w-5 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
+                      <span className="text-[13px] flex-1 text-white">{style.label}</span>
+                      <span className="text-[12px] text-white/30">{count}</span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${isEnabled ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/[.06] text-slate-500'}`}>
+                        {isEnabled ? 'On' : 'Off'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
