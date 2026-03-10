@@ -72,6 +72,8 @@ export default function ConstellationPage({ defaultLanguage }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMobileLangPicker, setShowMobileLangPicker] = useState(false);
   const [showMobileDomains, setShowMobileDomains] = useState(false);
+  const [showMobileVisuals, setShowMobileVisuals] = useState(false);
+  const [mobileStars, setMobileStars] = useState(false);
   const constellationRef = useRef(null);
 
   // UI scale: S=1, M=1.12, L=1.25
@@ -264,8 +266,8 @@ export default function ConstellationPage({ defaultLanguage }) {
       background: 'radial-gradient(ellipse at center, #0a0d1a 0%, #050710 70%, #020308 100%)',
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
     }}>
-      {/* Star field background */}
-      {showStars && <StarsCanvas />}
+      {/* Star field background — hidden on mobile unless toggled */}
+      {showStars && <div className={mobileStars ? '' : 'hidden md:block'}><StarsCanvas /></div>}
 
       {/* Viz area */}
       <div ref={constellationRef} className={`flex-1 relative flex ${viewMode === 'deck' && deckView === 'table' ? '' : 'items-center justify-center'}`}>
@@ -432,7 +434,15 @@ export default function ConstellationPage({ defaultLanguage }) {
         </div>
 
         {/* Mobile bottom bar */}
-        <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 px-3 pb-3 safe-bottom">
+        <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 px-3 pb-3 safe-bottom"
+          style={{ background: 'linear-gradient(to top, rgba(5,7,16,0.9) 0%, transparent 100%)', paddingTop: '2rem' }}>
+          {discovering && (
+            <div className="flex items-center justify-center gap-2 mb-2 px-3 py-2 rounded-xl text-[12px]"
+              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)' }}>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+              <span className="text-cyan-400">Discovering vocabulary... {discoveryProgress?.words?.length || 0} words found</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => setShowMobileDomains(v => !v)}
@@ -440,15 +450,24 @@ export default function ConstellationPage({ defaultLanguage }) {
               style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              {taxonomy.domains.length} Domains
+              Domains
             </button>
-            {discovering && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px]"
-                style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)', backdropFilter: 'blur(12px)' }}>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                <span className="text-cyan-400">{discoveryProgress?.words?.length || 0} found...</span>
-              </div>
-            )}
+            <button
+              onClick={() => setShowMobileVisuals(v => !v)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-medium"
+              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              Visuals
+            </button>
+            <Link
+              to="/constellation"
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-medium"
+              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Languages
+            </Link>
           </div>
         </div>
       </div>
@@ -588,6 +607,67 @@ export default function ConstellationPage({ defaultLanguage }) {
       {/* Mobile domains backdrop */}
       {showMobileDomains && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setShowMobileDomains(false)} />
+      )}
+
+      {/* Mobile visuals drawer */}
+      {showMobileVisuals && (
+        <div className="md:hidden fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl"
+          style={{ background: 'rgba(8,10,18,0.97)', borderTop: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)' }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <span className="text-[14px] font-semibold text-white">Visual settings</span>
+            <button onClick={() => setShowMobileVisuals(false)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <X className="w-4 h-4 text-white" />
+            </button>
+          </div>
+          <div className="p-4 space-y-3">
+            {/* Stars toggle */}
+            <button
+              onClick={() => setMobileStars(v => !v)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${mobileStars ? 'bg-white/[.08]' : 'bg-white/[.03]'}`}
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <span className="text-[13px] text-white">Star field background</span>
+              <span className={`text-[12px] px-2 py-0.5 rounded-full ${mobileStars ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/[.06] text-slate-500'}`}>
+                {mobileStars ? 'On' : 'Off'}
+              </span>
+            </button>
+
+            {/* Color mode */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setColorMode('domain')}
+                className={`flex-1 py-2.5 rounded-xl text-[12px] font-medium transition-all ${colorMode === 'domain' ? 'bg-white/[.1] text-white' : 'bg-white/[.03] text-slate-500'}`}
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                Color: Domain
+              </button>
+              <button
+                onClick={() => setColorMode('source')}
+                className={`flex-1 py-2.5 rounded-xl text-[12px] font-medium transition-all ${colorMode === 'source' ? 'bg-white/[.1] text-white' : 'bg-white/[.03] text-slate-500'}`}
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                Color: Source
+              </button>
+            </div>
+
+            {/* Connections toggle */}
+            <button
+              onClick={() => setShowConnections(v => !v)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${showConnections ? 'bg-white/[.08]' : 'bg-white/[.03]'}`}
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <span className="text-[13px] text-white">Cross-domain links</span>
+              <span className={`text-[12px] px-2 py-0.5 rounded-full ${showConnections ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/[.06] text-slate-500'}`}>
+                {showConnections ? 'On' : 'Off'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile visuals backdrop */}
+      {showMobileVisuals && (
+        <div className="md:hidden fixed inset-0 z-40" onClick={() => setShowMobileVisuals(false)} />
       )}
 
       {/* Modals */}

@@ -104,8 +104,8 @@ export default function PublicConstellation({
 
   return (
     <div className="relative w-full h-full" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace" }}>
-      {/* Title bar */}
-      <div className="absolute top-3 left-3 right-3 z-10 flex justify-between items-start">
+      {/* Title bar — desktop only */}
+      <div className="hidden md:flex absolute top-3 left-3 right-3 z-10 justify-between items-start">
         <div>
           <h1 className="text-base font-extrabold tracking-wider text-white">
             {language?.name || 'chiShona'} Language Constellation
@@ -122,9 +122,9 @@ export default function PublicConstellation({
         </div>
       </div>
 
-      {/* Recent signal ticker */}
+      {/* Recent signal ticker — desktop only */}
       {recentSignals.length > 0 && (
-        <div className="absolute top-10 left-3 z-10">
+        <div className="hidden md:block absolute top-10 left-3 z-10">
           <div className="text-[12px] px-2 py-1 rounded" style={{ background: 'rgba(10,12,20,0.8)', color: 'rgba(255,255,255,0.4)' }}>
             {recentSignals[0].word} <span style={{ color: 'rgba(255,255,255,0.25)' }}>appeared in Wikipedia edit</span>
           </div>
@@ -385,9 +385,9 @@ export default function PublicConstellation({
         </text>
       </svg>
 
-      {/* Tooltip */}
+      {/* Tooltip — desktop only (mobile uses tap → modal) */}
       {hoveredWordInfo && (
-        <div className="absolute bottom-3 left-3 z-20 rounded-lg p-3 max-w-xs"
+        <div className="hidden md:block absolute bottom-3 left-3 z-20 rounded-lg p-3 max-w-xs"
           style={{
             background: 'rgba(10,12,20,0.95)',
             backdropFilter: 'blur(10px)',
