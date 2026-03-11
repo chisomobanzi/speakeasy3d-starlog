@@ -409,7 +409,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
           <img src={starlogLogo} alt="Starlog" className="w-10 h-10 mx-auto mb-2" />
           <h1 className="text-2xl sm:text-3xl font-bold mb-1">
             <span className="text-white">Starlog</span>
-            <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent"> — Language Atlas</span>
+            <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">: Language Atlas</span>
           </h1>
           <p className="text-[13px] text-slate-400 max-w-xs mx-auto leading-relaxed">
             Every word is a star. Explore vocabulary mapped across semantic domains.
