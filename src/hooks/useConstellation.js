@@ -1,19 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { adaptSupabaseData } from '../lib/constellation-adapter';
-import { fetchQuickSample } from '../lib/wiktionaryQuickSample';
-import { fetchKlokahSample } from '../lib/klokahFetcher';
+import { fetchFromAllSources } from '../lib/sourceRegistry';
 
-// Languages fetched from Klokah instead of Wiktionary
-const KLOKAH_LANGUAGES = new Set([
-  'ami', 'tay', 'xsy', 'ssf', 'sdq', 'bnn', 'pwn', 'dru',
-  'trv', 'ckv', 'tsu', 'xnb', 'sxr', 'pyu', 'tao', 'szy',
-]);
+// Register built-in sources on first import
+import '../lib/registerBuiltinSources';
 
 /**
  * Hook to load constellation data from Supabase and subscribe to real-time signals.
  * When the DB returns no words for a language, auto-discovers vocabulary
- * from Wiktionary for an instant constellation.
+ * from registered sources (Wiktionary, Klokah, etc.) via the source registry.
  *
  * @param {string} languageCode
  * @returns {{ data, loading, error, discovering, discoveryProgress, pulseMap, recentSignals, isLive }}
@@ -24,7 +20,7 @@ export function useConstellation(languageCode) {
   const [error, setError] = useState(null);
   const [isLive, setIsLive] = useState(false);
 
-  // Discovery state (Wiktionary auto-fetch when DB is empty)
+  // Discovery state
   const [discovering, setDiscovering] = useState(false);
   const [discoveryProgress, setDiscoveryProgress] = useState(null);
 
@@ -82,20 +78,17 @@ export function useConstellation(languageCode) {
     }
   }, [languageCode]);
 
-  // Auto-discover vocabulary from Wiktionary
+  // Auto-discover vocabulary from registered sources
   const startDiscovery = useCallback(async (langCode) => {
     // Guard against double-fire
     if (discoveryRef.current) return;
     discoveryRef.current = true;
 
     setDiscovering(true);
-    setDiscoveryProgress({ fetched: 0, total: 0, words: [] });
+    setDiscoveryProgress({ fetched: 0, total: 0, words: [], sourceName: '' });
 
     try {
-      const fetcher = KLOKAH_LANGUAGES.has(langCode)
-        ? fetchKlokahSample
-        : fetchQuickSample;
-      const result = await fetcher(langCode, (progress) => {
+      const result = await fetchFromAllSources(langCode, (progress) => {
         // Stream partial results into the constellation as they arrive
         if (progress.words.length > 0) {
           setDiscoveryProgress(progress);

@@ -38,6 +38,18 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
   const setActiveLanguage = useAppStore((s) => s.setActiveLanguage);
   const languageCode = urlLanguageCode || defaultLanguage || activeLanguage || 'sn';
 
+  // On desktop, always use fullscreen mode even when embedded prop is set
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const effectiveEmbedded = embedded && !isDesktop;
+
   // View mode: 'language' | 'decks' | 'deck'
   const [viewMode, setViewMode] = useState(urlDeckId ? 'deck' : 'language');
   const [activeDeckId, setActiveDeckId] = useState(urlDeckId || null);
@@ -76,7 +88,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
 
   // UI scale: S=1, M=1.12, L=1.25
   const UI_SCALES = { S: 1, M: 1.12, L: 1.25 };
-  const [uiScaleKey, setUiScaleKey] = useState(() => localStorage.getItem('starlog-ui-scale') || 'M');
+  const [uiScaleKey, setUiScaleKey] = useState(() => localStorage.getItem('starlog-ui-scale') || 'L');
   const uiScale = UI_SCALES[uiScaleKey] || 1.12;
   const cycleScale = useCallback(() => {
     const keys = Object.keys(UI_SCALES);
@@ -269,8 +281,124 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
   const displayData = constellationData || emptyConstellation;
   const { language } = displayData;
 
-  /* ── Embedded mode (inside AppShell, with BottomNav) ── */
-  if (embedded) {
+  /* ── Embedded mode (mobile only — desktop always uses fullscreen) ── */
+  if (effectiveEmbedded) {
+    /* Shared controls rendered as a sidebar panel on desktop, below constellation on mobile */
+    const controlsPanel = (
+      <>
+        {/* Stats */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[13px] text-white font-semibold">{baseVocabulary.length} words</span>
+          <span className="text-[12px] text-slate-500">{taxonomy.domains.length} domains</span>
+        </div>
+
+        {/* Domain grid */}
+        <div className="grid grid-cols-3 gap-1.5">
+          {taxonomy.domains.map(d => {
+            const count = baseVocabulary.filter(w => w.domains.includes(d.id)).length;
+            const isSel = selectedDomain === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => handleSelectDomain(isSel ? null : d.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-left transition-all ${
+                  isSel ? 'bg-white/[.1] ring-1 ring-white/20' : 'bg-white/[.03] hover:bg-white/[.06]'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] text-white truncate">{d.name}</div>
+                  <div className="text-[10px] text-slate-500">{count}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sources / Display */}
+        {Object.keys(sourceCounts).length > 0 && (
+          <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="text-[11px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Sources
+            </div>
+            <div className="space-y-0.5">
+              {Object.entries(sourceCounts).map(([key, count]) => {
+                if (count === 0) return null;
+                const style = getSourceStyle(key);
+                const isEnabled = enabledCS === null || enabledCS.includes(key);
+                return (
+                  <button
+                    key={key}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all"
+                    style={{ opacity: isEnabled ? 1 : 0.35, background: isEnabled ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+                    onClick={() => toggleConstellationSource(key, allProvenanceIds)}
+                  >
+                    <span className="text-[14px] w-4 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
+                    <span className="text-[12px] flex-1 text-white/50">{style.label}</span>
+                    <span className="text-[12px] text-white/30">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Display controls — desktop only */}
+        <div className="hidden md:block mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="text-[11px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Display
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${colorMode === 'domain' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setColorMode('domain')}
+            >Color: Domain</button>
+            <button
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${colorMode === 'source' ? 'bg-white/[.12] text-white' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setColorMode('source')}
+            >Color: Source</button>
+            <button
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${showConnections ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[.04] text-white/40'}`}
+              onClick={() => setShowConnections(v => !v)}
+            >Links</button>
+          </div>
+        </div>
+
+        {/* Expand to fullscreen */}
+        <button
+          onClick={() => navigate(`/constellation/${languageCode}`)}
+          className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-colors hover:bg-white/[.08]"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}
+        >
+          <Sparkles className="w-4 h-4" />
+          Open fullscreen
+        </button>
+
+        {/* Word list popup when domain is selected */}
+        {selectedDomain && (
+          <div className="mt-3">
+            <div className="text-[11px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {taxonomy.domains.find(d => d.id === selectedDomain)?.name} — Words
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-0.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              {(searchActive ? augmentedVocabulary : baseVocabulary)
+                .filter(w => w.domains.includes(selectedDomain))
+                .map(w => (
+                  <button
+                    key={w.id}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 text-left hover:bg-white/[.05] rounded transition-colors"
+                    onClick={() => handleStarClick(w)}
+                  >
+                    <span className="text-[12px] text-white">{w.word}</span>
+                    <span className="text-[11px] text-slate-500 truncate max-w-[50%] text-right">{w.translation}</span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+      </>
+    );
+
     return (
       <div className="min-h-screen pb-4" style={{
         background: 'radial-gradient(ellipse at center, #0a0d1a 0%, #050710 70%, #020308 100%)',
@@ -281,7 +409,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
           <img src={starlogLogo} alt="Starlog" className="w-10 h-10 mx-auto mb-2" />
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
             <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              Starlog
+              Language Atlas
             </span>
           </h1>
           <p className="text-[13px] text-slate-400 max-w-xs mx-auto leading-relaxed">
@@ -290,7 +418,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
         </div>
 
         {/* Language picker */}
-        <div className="max-w-md mx-auto mb-4 px-2">
+        <div className="max-w-md md:max-w-lg mx-auto mb-4 px-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
             <select
@@ -315,100 +443,82 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
           </div>
         </div>
 
-        {/* Inline constellation */}
-        <div className="max-w-lg mx-auto aspect-square relative">
-          {discovering && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px]"
-              style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)' }}>
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-              <span className="text-cyan-400">{discoveryProgress?.words?.length || 0} words found...</span>
-            </div>
-          )}
-          <PublicConstellation
-            language={language}
-            taxonomy={taxonomy}
-            vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
-            selectedDomain={selectedDomain}
-            hoveredWord={hoveredWord}
-            pulseMap={pulseMap}
-            isLive={isLive}
-            recentSignals={recentSignals}
-            colorMode={colorMode}
-            showConnections={showConnections}
-            onHoverWord={setHoveredWord}
-            onSelectDomain={handleSelectDomain}
-            highlightedIds={searchActive ? highlightedIds : null}
-            searchActive={searchActive}
-            onStarClick={handleStarClick}
-            sourceMap={sourceMap}
-          />
+        {/* ── Desktop: side-by-side layout ── */}
+        <div className="hidden md:flex max-w-6xl mx-auto px-4 gap-6">
+          {/* Constellation — takes most of the space */}
+          <div className="flex-1 relative" style={{ minHeight: '560px' }}>
+            {discovering && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px]"
+                style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                <span className="text-cyan-400">
+                  {discoveryProgress?.sourceName ? `${discoveryProgress.sourceName}: ` : ''}
+                  {discoveryProgress?.words?.length || 0} words found...
+                </span>
+              </div>
+            )}
+            <PublicConstellation
+              language={language}
+              taxonomy={taxonomy}
+              vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
+              selectedDomain={selectedDomain}
+              hoveredWord={hoveredWord}
+              pulseMap={pulseMap}
+              isLive={isLive}
+              recentSignals={recentSignals}
+              colorMode={colorMode}
+              showConnections={showConnections}
+              onHoverWord={setHoveredWord}
+              onSelectDomain={handleSelectDomain}
+              highlightedIds={searchActive ? highlightedIds : null}
+              searchActive={searchActive}
+              onStarClick={handleStarClick}
+              sourceMap={sourceMap}
+            />
+          </div>
+
+          {/* Sidebar panel */}
+          <div className="w-72 shrink-0">
+            {controlsPanel}
+          </div>
         </div>
 
-        {/* Stats + domains */}
-        <div className="max-w-md mx-auto mt-2 px-2">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[13px] text-white font-semibold">{baseVocabulary.length} words</span>
-            <span className="text-[12px] text-slate-500">{taxonomy.domains.length} domains</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {taxonomy.domains.map(d => {
-              const count = baseVocabulary.filter(w => w.domains.includes(d.id)).length;
-              const isSel = selectedDomain === d.id;
-              return (
-                <button
-                  key={d.id}
-                  onClick={() => handleSelectDomain(isSel ? null : d.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-left transition-all ${
-                    isSel ? 'bg-white/[.1] ring-1 ring-white/20' : 'bg-white/[.03] hover:bg-white/[.06]'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] text-white truncate">{d.name}</div>
-                    <div className="text-[10px] text-slate-500">{count}</div>
-                  </div>
-                </button>
-              );
-            })}
+        {/* ── Mobile: stacked layout ── */}
+        <div className="md:hidden">
+          <div className="max-w-lg mx-auto aspect-square relative">
+            {discovering && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px]"
+                style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                <span className="text-cyan-400">
+                  {discoveryProgress?.sourceName ? `${discoveryProgress.sourceName}: ` : ''}
+                  {discoveryProgress?.words?.length || 0} words found...
+                </span>
+              </div>
+            )}
+            <PublicConstellation
+              language={language}
+              taxonomy={taxonomy}
+              vocabulary={searchActive ? augmentedVocabulary : baseVocabulary}
+              selectedDomain={selectedDomain}
+              hoveredWord={hoveredWord}
+              pulseMap={pulseMap}
+              isLive={isLive}
+              recentSignals={recentSignals}
+              colorMode={colorMode}
+              showConnections={showConnections}
+              onHoverWord={setHoveredWord}
+              onSelectDomain={handleSelectDomain}
+              highlightedIds={searchActive ? highlightedIds : null}
+              searchActive={searchActive}
+              onStarClick={handleStarClick}
+              sourceMap={sourceMap}
+            />
           </div>
 
-          {/* Sources / Display */}
-          {Object.keys(sourceCounts).length > 0 && (
-            <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="text-[11px] tracking-[0.15em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                Sources
-              </div>
-              <div className="space-y-0.5">
-                {Object.entries(sourceCounts).map(([key, count]) => {
-                  if (count === 0) return null;
-                  const style = getSourceStyle(key);
-                  const isEnabled = enabledCS === null || enabledCS.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all"
-                      style={{ opacity: isEnabled ? 1 : 0.35, background: isEnabled ? 'rgba(255,255,255,0.03)' : 'transparent' }}
-                      onClick={() => toggleConstellationSource(key, allProvenanceIds)}
-                    >
-                      <span className="text-[14px] w-4 text-center" style={{ color: style.coreColor }}>{style.symbol}</span>
-                      <span className="text-[12px] flex-1 text-white/50">{style.label}</span>
-                      <span className="text-[12px] text-white/30">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Expand to fullscreen */}
-          <button
-            onClick={() => navigate(`/constellation/${languageCode}`)}
-            className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-colors hover:bg-white/[.08]"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}
-          >
-            <Sparkles className="w-4 h-4" />
-            Open fullscreen
-          </button>
+          <div className="max-w-md mx-auto mt-2 px-2">
+            {controlsPanel}
+          </div>
         </div>
 
         {/* Modals */}
@@ -429,7 +539,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
 
   /* ── Fullscreen mode ── */
   return (
-    <div className="fixed top-0 left-0 flex" style={{
+    <div className="fixed top-0 left-0 z-50 flex" style={{
       width: `${100 / uiScale}vw`,
       height: `${100 / uiScale}vh`,
       zoom: uiScale,
@@ -561,7 +671,7 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
               <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
               <div>
                 <p className="text-[13px] text-white font-medium">
-                  Discovering {language.name} vocabulary...
+                  Discovering {language.name} vocabulary{discoveryProgress?.sourceName ? ` via ${discoveryProgress.sourceName}` : ''}...
                 </p>
                 <p className="text-[12px] text-slate-400">
                   {discoveryProgress?.words?.length || 0} words found
@@ -616,7 +726,9 @@ export default function ConstellationPage({ defaultLanguage, embedded = false })
             <div className="flex items-center justify-center gap-2 mb-2 px-3 py-2 rounded-xl text-[12px]"
               style={{ background: 'rgba(8,10,18,0.85)', border: '1px solid rgba(6,182,212,0.2)' }}>
               <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-              <span className="text-cyan-400">Discovering vocabulary... {discoveryProgress?.words?.length || 0} words found</span>
+              <span className="text-cyan-400">
+                Discovering{discoveryProgress?.sourceName ? ` via ${discoveryProgress.sourceName}` : ''}... {discoveryProgress?.words?.length || 0} words
+              </span>
             </div>
           )}
           <div className="flex gap-2">
